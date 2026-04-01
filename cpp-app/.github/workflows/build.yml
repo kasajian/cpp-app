@@ -41,8 +41,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: cpp_app-windows-x64
-          path: build/cpp_app-*.zip
+          name: release-windows-x64
+          path: build/*.zip
           if-no-files-found: error
 
   # ---------------------------------------------------------------------------
@@ -81,8 +81,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: cpp_app-linux-x64
-          path: build/cpp_app-*.tar.gz
+          name: release-linux-x64
+          path: build/*.tar.gz
           if-no-files-found: error
 
   # ---------------------------------------------------------------------------
@@ -115,15 +115,15 @@ jobs:
       - name: Rename artifact to include arch
         run: |
           cd build
-          for f in cpp_app-*.tar.gz; do
+          for f in *.tar.gz; do
             mv "$f" "${f%.tar.gz}-x86_64.tar.gz"
           done
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: cpp_app-macos-x86_64
-          path: build/cpp_app-*-x86_64.tar.gz
+          name: release-macos-x86_64
+          path: build/*-x86_64.tar.gz
           if-no-files-found: error
 
   # ---------------------------------------------------------------------------
@@ -156,15 +156,15 @@ jobs:
       - name: Rename artifact to include arch
         run: |
           cd build
-          for f in cpp_app-*.tar.gz; do
+          for f in *.tar.gz; do
             mv "$f" "${f%.tar.gz}-arm64.tar.gz"
           done
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: cpp_app-macos-arm64
-          path: build/cpp_app-*-arm64.tar.gz
+          name: release-macos-arm64
+          path: build/*-arm64.tar.gz
           if-no-files-found: error
 
   # ---------------------------------------------------------------------------

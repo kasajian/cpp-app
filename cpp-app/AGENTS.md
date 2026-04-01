@@ -103,6 +103,13 @@ causes build failures.
   `cpack` directly (not via `cmake --build ... --target package` on all platforms) to
   produce the release archives. Do not change the archive format without updating the
   `upload-artifact` `path:` globs in the workflow.
+- **`${PROJECT_NAME}` is the single source of truth for the executable name.** Every
+  CMake command after `project()` — `add_executable`, `target_link_libraries`,
+  `target_compile_options`, `target_link_options`, `install`, and
+  `CPACK_PACKAGE_NAME` — uses `${PROJECT_NAME}`. Do not replace these references with
+  a hardcoded string. The GitHub Actions workflow uses broad globs (`build/*.zip`,
+  `build/*.tar.gz`) intentionally, so it stays correct after a rename without any
+  workflow edits. Do not narrow those globs back to include a hardcoded name.
 
 ---
 

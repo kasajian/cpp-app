@@ -9,6 +9,12 @@ if(WIN32)
     set(VCPKG_TARGET_TRIPLET "x64-windows-static" CACHE STRING "vcpkg triplet")
 endif()
 
+# ---------------------------------------------------------------------------
+# PROJECT NAME
+# Change the name here (first argument to project()) to rename the executable
+# and all release archives. Every other reference in this file uses
+# ${PROJECT_NAME} automatically – nothing else needs to be touched.
+# ---------------------------------------------------------------------------
 project(cpp_app
     VERSION 1.0.0
     DESCRIPTION "Cross-platform C++ console application"
@@ -22,7 +28,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Output the binary directly to the build root for easy packaging
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-add_executable(cpp_app src/main.cpp)
+add_executable(${PROJECT_NAME} src/main.cpp)
 
 # ---------------------------------------------------------------------------
 # Boost (managed via vcpkg – see vcpkg.json)
@@ -33,7 +39,7 @@ add_executable(cpp_app src/main.cpp)
 #   3. Add Boost::<component> to target_link_libraries below
 # ---------------------------------------------------------------------------
 find_package(Boost REQUIRED COMPONENTS filesystem)
-target_link_libraries(cpp_app PRIVATE Boost::filesystem)
+target_link_libraries(${PROJECT_NAME} PRIVATE Boost::filesystem)
 
 # ---------------------------------------------------------------------------
 # Platform-specific link flags to maximise self-containment
@@ -53,19 +59,19 @@ if(WIN32)
 
     # With MinGW we can pass -static to pull in libgcc and libstdc++.
     if(MINGW)
-        target_link_options(cpp_app PRIVATE -static)
+        target_link_options(${PROJECT_NAME} PRIVATE -static)
     endif()
 
 elseif(APPLE)
     # macOS: rely on the OS-shipped libSystem / libc++ (present on every
     # supported macOS version). -dead_strip removes unused code.
-    target_link_options(cpp_app PRIVATE "LINKER:-dead_strip")
+    target_link_options(${PROJECT_NAME} PRIVATE "LINKER:-dead_strip")
 
 elseif(UNIX)
     # Linux: statically link libgcc and libstdc++ so the binary runs on any
     # glibc-based distro from the last ~5 years. glibc itself remains dynamic
     # because its ABI is stable and a static glibc is not safe to redistribute.
-    target_link_options(cpp_app PRIVATE
+    target_link_options(${PROJECT_NAME} PRIVATE
         -static-libgcc
         -static-libstdc++
     )
@@ -75,22 +81,22 @@ endif()
 # Compiler warnings
 # ---------------------------------------------------------------------------
 if(MSVC)
-    target_compile_options(cpp_app PRIVATE /W4)
+    target_compile_options(${PROJECT_NAME} PRIVATE /W4)
 else()
-    target_compile_options(cpp_app PRIVATE -Wall -Wextra -Wpedantic)
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
 # ---------------------------------------------------------------------------
 # Install rules (used by CPack / GitHub Actions packaging)
 # ---------------------------------------------------------------------------
-install(TARGETS cpp_app
+install(TARGETS ${PROJECT_NAME}
     RUNTIME DESTINATION .
 )
 
 # ---------------------------------------------------------------------------
 # CPack – creates a simple ZIP/TGZ archive of the installed files
 # ---------------------------------------------------------------------------
-set(CPACK_PACKAGE_NAME "cpp_app")
+set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
 set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${PROJECT_DESCRIPTION}")
 set(CPACK_STRIP_FILES TRUE)
