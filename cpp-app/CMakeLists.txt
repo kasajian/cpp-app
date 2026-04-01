@@ -54,6 +54,22 @@ find_package(Boost REQUIRED COMPONENTS filesystem)
 target_link_libraries(${PROJECT_NAME} PRIVATE Boost::filesystem)
 
 # ---------------------------------------------------------------------------
+# Precompiled header (PCH)
+# Listed headers are compiled once and reused by every .cpp in the target,
+# which speeds up incremental builds when headers are large (e.g. Boost).
+#
+# Add any header that is included by most of your source files.
+# Angle-bracket headers (<...>) are system/library headers.
+# Quoted headers ("...") are your own headers relative to the source tree.
+# ---------------------------------------------------------------------------
+target_precompile_headers(${PROJECT_NAME} PRIVATE
+    <iostream>
+    <string>
+    <boost/filesystem.hpp>
+    # "src/my_header.h"   ← add your own frequently-used headers here
+)
+
+# ---------------------------------------------------------------------------
 # Platform-specific link flags to maximise self-containment
 # ---------------------------------------------------------------------------
 
