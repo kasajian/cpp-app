@@ -2,7 +2,10 @@
   "name": "cpp-app",
   "version": "1.0.0",
   "dependencies": [
-    "boost-filesystem",
+    "boost-asio",
+    "boost-beast",
+    "boost-json",
+    "boost-program-options",
     "gtest"
   ]
 }

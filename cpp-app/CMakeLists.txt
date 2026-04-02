@@ -64,15 +64,41 @@ target_include_directories(${PROJECT_NAME}_lib PUBLIC
 )
 
 # ---------------------------------------------------------------------------
-# Boost (managed via vcpkg – see vcpkg.json)
+# Dependencies
+#
+# Boost.Asio and Boost.Beast are header-only; they appear as link targets
+# (Boost::asio, Boost::beast) to let CMake propagate their include paths and
+# any platform-specific system library requirements (e.g. Winsock on Windows,
+# pthreads on Linux).
+#
+# Boost.JSON and Boost.ProgramOptions have compiled object files and must be
+# listed in COMPONENTS so CMake locates and links the right .lib / .a files.
+#
+# std::filesystem, std::regex, std::thread, and std::future are part of the
+# C++17 standard – no find_package required.
 #
 # To add more Boost libraries:
-#   1. Add the component name to vcpkg.json  (e.g. "boost-regex")
-#   2. Add the component name to the COMPONENTS list below (e.g. regex)
-#   3. Add Boost::<component> to target_link_libraries below
+#   1. Add the vcpkg package name to vcpkg.json  (e.g. "boost-regex")
+#   2. If it is a compiled library, add its component name to COMPONENTS below
+#      (e.g. regex) and add Boost::<component> to target_link_libraries.
+#   3. If it is header-only, just add Boost::<name> to target_link_libraries.
 # ---------------------------------------------------------------------------
-find_package(Boost REQUIRED COMPONENTS filesystem)
-target_link_libraries(${PROJECT_NAME}_lib PUBLIC Boost::filesystem)
+find_package(Boost REQUIRED COMPONENTS json program_options)
+find_package(Threads REQUIRED)
+
+target_link_libraries(${PROJECT_NAME}_lib PUBLIC
+    Boost::asio             # header-only; handles Winsock on Windows
+    Boost::beast            # header-only; depends on Boost::asio
+    Boost::json             # compiled
+    Boost::program_options  # compiled
+    Threads::Threads        # pthreads on Linux, built-in on Windows/macOS
+)
+
+# Tell Boost.Asio which minimum Windows API version to target.
+# 0x0A00 = Windows 10. Only relevant on Windows; ignored on other platforms.
+if(WIN32)
+    target_compile_definitions(${PROJECT_NAME}_lib PUBLIC _WIN32_WINNT=0x0A00)
+endif()
 
 # ---------------------------------------------------------------------------
 # Precompiled header (PCH)
@@ -80,13 +106,15 @@ target_link_libraries(${PROJECT_NAME}_lib PUBLIC Boost::filesystem)
 # which speeds up incremental builds when headers are large (e.g. Boost).
 #
 # Add any header that is included by most of your source files.
-# Angle-bracket headers (<...>) are system/library headers.
-# Quoted headers ("...") are your own headers relative to the source tree.
 # ---------------------------------------------------------------------------
 target_precompile_headers(${PROJECT_NAME}_lib PRIVATE
     <iostream>
     <string>
-    <boost/filesystem.hpp>
+    <vector>
+    <boost/asio.hpp>
+    <boost/beast.hpp>
+    <boost/json.hpp>
+    <boost/program_options.hpp>
     # "src/my_header.h"   ← add your own frequently-used headers here
 )
 
