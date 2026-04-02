@@ -181,6 +181,53 @@ as they do with GCC.
 
 ---
 
+## Setup Instruction Quality Standards
+
+When writing or updating "One-time setup" instructions in README.md or any other documentation, every tool entry must follow these rules:
+
+### Detection steps must verify the desired state, not just existence
+
+A detection command is only useful if it confirms that what's installed is actually sufficient for the build. Checking that a tool exists is not the same as checking that the right version is installed.
+
+**Rules:**
+1. Every tool detect step must state the **minimum required version** alongside the command.
+2. If the tool's version number alone is ambiguous (e.g., Apple Clang uses different numbering than upstream LLVM), explain what the user should look for in the output.
+3. If a tool is required to be on PATH to work (not just installed somewhere on disk), the detect step should confirm PATH availability, not just installation.
+4. If the detect command succeeds but the version is too old, explicitly tell the user what to do (upgrade, not just install).
+
+**Example of a bad detect step:**
+```
+- Detect: `clang-cl --version`
+```
+This only tells you clang-cl exists. It doesn't tell you if the version is new enough.
+
+**Example of a good detect step:**
+```
+- Detect: `clang-cl --version` — must show version **14.0 or higher**. VS 2017 and VS 2019 ship older versions that will not work with the `-G "Visual Studio 17 2022"` CMake generator.
+```
+
+### Every required tool must have a detect step
+
+Do not skip the detect step for any tool, even ones that seem obvious. The goal is that a developer on a clean machine can run each detect command top-to-bottom and know exactly which tools need to be installed.
+
+### Installation hints over full instructions
+
+Installation instructions tend to go out of date (URLs change, package names change). Prefer:
+- A stable download page URL (e.g., the product's official page, not a direct download link)
+- A package manager command (winget, brew, apt-get, pkg)
+- A note about what options/workloads/components to select during install
+
+Do not document every click in an installer wizard — those change with every release.
+
+### Future automation readiness
+
+These steps are written to be eventually automatable. Write them so a script could parse and execute them. That means:
+- Each tool is a clearly separated entry
+- Detect and install are clearly labeled
+- Version requirements are explicit (so a script can compare versions)
+
+---
+
 ## What Not to Do
 
 - Do not add a runtime installer or an "install dependencies" step to the user-facing

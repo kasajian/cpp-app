@@ -112,11 +112,12 @@ everywhere.
 **One-time setup**
 
 **Git**
-- Detect: `git --version`
+- Detect: `git --version` — no minimum version constraint; any version works.
 - Install: Download from https://git-scm.com/download/win or `winget install Git.Git`
 
 **Visual Studio 2022 or Build Tools for Visual Studio 2022**
-- Detect: `clang-cl --version` — if this works, the required components are already present.
+- Detect: `clang-cl --version` — must show version **14.0 or higher**. VS 2017 and VS 2019 ship older clang-cl versions (6–12) and will not work with the `-G "Visual Studio 17 2022"` CMake generator required by this project.
+- If version is below 14.0: install or upgrade to VS 2022 / Build Tools for Visual Studio 2022 with the workloads noted.
 - Install — choose one:
   - **Full IDE:** Download [Visual Studio 2022](https://visualstudio.microsoft.com/) — includes the editor, debugger, and all build tools.
   - **Build tools only (no IDE):** Download [Build Tools for Visual Studio 2022](https://visualstudio.microsoft.com/downloads/#build-tools-for-visual-studio-2022) — smaller (~2–3 GB), no editor, suitable if you use VS Code or another editor.
@@ -124,11 +125,13 @@ everywhere.
   - Workload: *Desktop development with C++*
   - Individual component: *C++ Clang tools for Windows* (installs `clang-cl` and `llvm-objcopy`)
 
-> **Note:** CMake is bundled with both installers — no separate CMake install needed.
+**CMake** *(bundled with Visual Studio — no separate install needed)*
+- Detect: `cmake --version` — must show version **3.20 or higher** (project minimum).
+- If missing or too old: re-run the VS installer and ensure *Desktop development with C++* workload is selected; CMake is included. Alternatively install standalone from https://cmake.org/download/
 
 **vcpkg**
-- Detect: `echo $env:VCPKG_ROOT` (PowerShell) — if this prints a path, vcpkg is configured.
-- Also check: `vcpkg version`
+- Detect: `echo $env:VCPKG_ROOT` (PowerShell) — must print a valid directory path. If empty or not set, vcpkg is not configured.
+- Also check: `vcpkg version` — confirms the tool is functional.
 - Install:
   ```powershell
   git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
@@ -175,8 +178,9 @@ ctest --test-dir build -C Release --output-on-failure
 **One-time setup**
 
 **Xcode Command Line Tools** *(provides Apple Clang, git, make)*
-- Detect: `xcode-select -p` — prints the active developer directory if installed.
-- Also check: `clang --version`
+- Detect: `xcode-select -p` — must print a path (e.g. `/Library/Developer/CommandLineTools` or `/Applications/Xcode.app/Contents/Developer`). If it prints an error, CLT are not installed.
+- Also check: `clang --version` — look for **"Apple clang version 14.0 or higher"** in the output. Earlier versions may not fully support all C++17 features used in this project and may have issues with the macOS 12.0 deployment target.
+- If version is too old: run `softwareupdate --all --install --force` to update Xcode CLT, or install a newer Xcode from the App Store.
 - Install: `xcode-select --install`
 
 **Homebrew**
@@ -184,11 +188,13 @@ ctest --test-dir build -C Release --output-on-failure
 - Install: `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`
 
 **LLVM tools** *(provides `llvm-objcopy`, required for embedded resource build)*
-- Detect: `llvm-objcopy --version` or `$(brew --prefix llvm)/bin/llvm-objcopy --version`
+- Detect: `$(brew --prefix llvm)/bin/llvm-objcopy --version` — use this exact command because Homebrew does NOT put LLVM tools on PATH by default. Running just `llvm-objcopy --version` may fail even when LLVM is installed.
+- CMake finds `llvm-objcopy` via the Homebrew prefix automatically; the tool does not need to be on PATH for the build to work.
 - Install: `brew install llvm`
 
-> **Note:** Homebrew installs LLVM to a versioned prefix. The tools are accessible as
-> `$(brew --prefix llvm)/bin/llvm-objcopy`. CMake finds them automatically.
+**CMake**
+- Detect: `cmake --version` — must show version **3.20 or higher**.
+- Install: `brew install cmake`
 
 **vcpkg**
 - Detect: `echo $VCPKG_ROOT` — if this prints a path, vcpkg is configured.
@@ -238,15 +244,16 @@ ctest --test-dir build --output-on-failure
 **One-time setup**
 
 **Git**
-- Detect: `git --version`
+- Detect: `git --version` — any version works.
 - Install: `sudo apt-get install -y git`
 
 **Build tools + Clang + LLVM** *(one command installs all)*
-- Detect each individually:
-  - `clang --version`
-  - `llvm-objcopy --version`
-  - `cmake --version`
-  - `ninja --version`
+- Detect each individually. Add minimum version notes:
+  - `clang --version` — must show version **10.0 or higher** (Ubuntu 20.04 ships Clang 10, which is the minimum for full C++17 `std::filesystem` support).
+  - `llvm-objcopy --version` — any version works; just verify it is present.
+  - `cmake --version` — must show version **3.20 or higher**.
+  - `ninja --version` — any version works.
+- If cmake is below 3.20: Ubuntu 20.04 ships cmake 3.16. Install a newer cmake via `snap install cmake --classic` or the Kitware apt repository at https://apt.kitware.com/
 - Install:
   ```bash
   sudo apt-get update
@@ -307,7 +314,7 @@ ctest --test-dir build --output-on-failure
 **One-time setup**
 
 **Build tools**
-- Detect each: `git --version`, `cmake --version`, `clang --version`, `ninja --version`
+- Detect each: `git --version`, `cmake --version` (must be **3.20 or higher**), `clang --version` (must be **10.0 or higher**), `ninja --version`
 - Install: `pkg update && pkg install -y git cmake clang ninja python`
 
 **vcpkg**
