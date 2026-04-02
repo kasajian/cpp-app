@@ -125,7 +125,13 @@ endif()
 # Tell Boost.Asio which minimum Windows API version to target.
 # 0x0A00 = Windows 10. Only relevant on Windows; ignored on other platforms.
 if(WIN32)
-    target_compile_definitions(${PROJECT_NAME}_lib PUBLIC _WIN32_WINNT=0x0A00)
+    # Target Windows XP x64 / Server 2003 (0x0502) — the earliest AMD64 Windows.
+    # This is intentionally conservative: if code ever calls a newer Win32 API,
+    # the compiler will error, making the dependency explicit and opt-in per project.
+    target_compile_definitions(${PROJECT_NAME}_lib PUBLIC
+        _WIN32_WINNT=0x0502
+        WINVER=0x0502
+    )
 endif()
 
 # ---------------------------------------------------------------------------
