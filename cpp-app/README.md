@@ -210,28 +210,12 @@ Pre-built binaries are provided for Windows x64, Linux x64, macOS Intel, and mac
 Apple Silicon. If you are on a different system, building from source is the supported
 path.
 
-**FreeBSD / OpenBSD / NetBSD**
+**FreeBSD**
 
-The Linux build instructions above transfer directly. Replace the `apt-get` step with
-your system's package manager:
+The Linux build instructions above transfer directly. Replace the `apt-get` step with the FreeBSD package manager:
+`pkg install cmake ninja llvm`
 
-| System | Command |
-|---|---|
-| FreeBSD | `pkg install cmake ninja llvm` |
-| OpenBSD | `pkg_add cmake ninja llvm` |
-| NetBSD | `pkgin install cmake ninja llvm` |
-
-Clang is the default compiler on FreeBSD (10+) and is available on the others. vcpkg
-has known-working support on FreeBSD; OpenBSD and NetBSD support is best-effort.
-Use the same CMake configure command as Linux, substituting `clang` and `clang++` as
-shown.
-
-**Solaris and other Unix systems**
-
-Not officially supported. vcpkg support on Solaris is experimental and the Clang
-toolchain situation varies by version. If you want to attempt a build, the CMake and
-vcpkg setup is standard — you are most likely to hit issues at the vcpkg bootstrap or
-dependency compile stage rather than in the project's own code.
+Clang is the default compiler on FreeBSD (10+). vcpkg has known-working support on FreeBSD. Use the same CMake configure command as Linux, substituting `clang` and `clang++` as shown.
 
 ---
 

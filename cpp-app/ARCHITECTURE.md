@@ -1,10 +1,45 @@
 # Project Architecture & Design Rationale
 
-This document explains the technical decisions and architectural patterns used in this project. It is intended for developers and AI agents who need to understand the "why" behind the project's structure.
+This document explains the technical decisions, architectural patterns, and project specifications. It is intended for developers and AI agents who need to understand the "why" behind the structure or reconstruct the repository from scratch.
 
 ---
 
-## 1. Logic Isolation & Testability
+## 1. Project Structure & Manifest
+
+The repository is organized into a modular structure that separates production logic, main entry points, and tests.
+
+```text
+cpp-app/
+├── .github/workflows/
+│   └── build.yml          # Multi-platform CI/CD (Windows, Linux, macOS)
+├── src/
+│   ├── main.cpp           # Demo entry point (8 library sections)
+│   ├── math_utils.cpp     # Production logic (addition example)
+│   └── math_utils.h
+├── tests/
+│   ├── CMakeLists.txt     # Test target configuration
+│   └── test_math_utils.cpp # GTest cases for math_utils
+├── CMakeLists.txt         # Root build configuration
+├── vcpkg.json             # Dependency manifest (Boost, GTest)
+├── README.md              # User documentation
+├── AGENTS.md              # AI agent guidelines
+└── ARCHITECTURE.md        # Technical specification (this file)
+```
+
+---
+
+## 2. Dependency Manifest (`vcpkg.json`)
+
+The following libraries are managed via vcpkg in manifest mode:
+- **`boost-asio`**: Asynchronous networking and I/O.
+- **`boost-beast`**: HTTP and WebSocket library built on Asio.
+- **`boost-json`**: JSON parsing and serialization.
+- **`boost-program-options`**: Command-line argument parsing.
+- **`gtest`**: Google Test framework for unit testing.
+
+---
+
+## 3. Logic Isolation & Testability
 
 ### The Static Library Pattern
 The project is split into two main targets:
@@ -17,65 +52,67 @@ The project is split into two main targets:
 
 ---
 
-## 2. Toolchain: Clang Everywhere
+## 4. Source Code Specifications
+
+### `main.cpp` (Demonstration Suite)
+The entry point serves as a comprehensive "kitchen sink" demo of the integrated libraries:
+1.  **Boost.ProgramOptions**: Handles `--help`, `--host`, and `--port`.
+2.  **Boost.JSON**: Parses raw strings, inspects objects, and serializes responses.
+3.  **Boost.Asio**: Implements an asynchronous 200ms steady timer.
+4.  **Boost.Beast**: Performs a synchronous HTTP GET request to `example.com`.
+5.  **std::filesystem**: Enumerates and labels (DIR/FILE) the current working directory.
+6.  **std::regex**: Searches for IP patterns and extracts numbers from text.
+7.  **std::thread / std::future**: Executes `math_utils::add` asynchronously via `std::async`.
+8.  **Functional Programming**: Demonstrates `std::transform`, `std::copy_if`, and `std::reduce` (C++17).
+
+### `math_utils`
+Provides core production logic. Currently contains a basic `add(int, int)` function used to verify the static library linkage across production and test targets.
+
+---
+
+## 5. Toolchain: Clang Everywhere
 
 **Decision:** Enforce Clang on all platforms (Windows: `clang-cl`, Linux: `clang++`, macOS: Apple Clang).
 
 **Rationale:**
-- **Consistency:** Reduces "works on my machine" issues where GCC or MSVC might accept code that Clang rejects (or vice versa).
-- **Diagnostics:** Clang provides high-quality, readable error messages and warnings that are consistent across operating systems.
-- **Cross-Platform Parity:** Using the same compiler frontend ensures that language features and optimizations behave similarly on all targets.
+- **Consistency:** Reduces "works on my machine" issues where GCC or MSVC might accept code that Clang rejects.
+- **Diagnostics:** Clang provides high-quality, readable error messages consistent across operating systems.
+- **Cross-Platform Parity:** Ensures language features and optimizations behave similarly on all targets.
 
 ---
 
-## 3. Dependency Management: vcpkg Manifest Mode
-
-**Decision:** Use `vcpkg.json` (manifest mode) instead of manual library installation.
-
-**Rationale:**
-- **Reproducibility:** Every developer and CI runner uses the exact same versions of libraries.
-- **Zero-Setup CI:** GitHub Actions can automatically restore cached dependencies, speeding up builds.
-- **Static Linking:** vcpkg makes it easy to request static triplets (e.g., `x64-windows-static`), which is central to our [Self-Containment Principle](AGENTS.md).
-
----
-
-## 4. Build Performance: Precompiled Headers (PCH)
+## 6. Build Performance: Precompiled Headers (PCH)
 
 **Decision:** Use `target_precompile_headers` for heavy libraries like Boost and STL.
 
 **Rationale:**
 - **Speed:** Compiling Boost headers (especially Asio and Beast) is computationally expensive. Precompiling them once per build significantly reduces incremental build times.
-- **Developer Experience:** Faster builds lead to faster iteration cycles.
 
 ---
 
-## 5. Platform-Specific Linker Choices
+## 7. Platform-Specific Linker Choices
 
 ### Linux: glibc Compatibility
-**Decision:** Target Ubuntu 20.04 in CI and link `libgcc` and `libstdc++` statically.
-
-**Rationale:**
-- **Forward Compatibility:** By building on an older glibc (2.31), the binary remains compatible with newer distributions.
-- **Portability:** Statically linking the C++ standard library ensures the binary runs on distros that might have a different version of `libstdc++`.
+**Decision:** Target **Ubuntu 20.04** in CI and link `libgcc` and `libstdc++` statically.
+- **Rationale:** Building on glibc 2.31 ensures the binary remains compatible with newer distributions while providing its own C++ standard library.
 
 ### macOS: dead_strip
-**Decision:** Pass `LINKER:-dead_strip`.
-
-**Rationale:**
-- **Binary Size:** Removes unreachable code from the final binary, keeping the distribution small.
+**Decision:** Pass `LINKER:-dead_strip` and target **macOS 12.0**.
+- **Rationale:** Removes unreachable code to minimize binary size.
 
 ### Windows: Static CRT (/MT)
-**Decision:** Force `/MT` in Release builds.
-
-**Rationale:**
-- **Self-Containment:** Removes the dependency on `MSVCP140.dll` and other Visual C++ Redistributables, allowing the app to run on a "clean" Windows installation.
+**Decision:** Force `/MT` in Release builds and use the `x64-windows-static` vcpkg triplet.
+- **Rationale:** Eliminates dependencies on Visual C++ Redistributables for true self-containment.
 
 ---
 
-## 6. Testing Strategy: Google Test
+## 8. CI/CD Pipeline Blueprint (GitHub Actions)
 
-**Decision:** Use GTest with `gtest_discover_tests`.
-
-**Rationale:**
-- **Integration:** `gtest_discover_tests` allows CTest to see individual test cases, enabling fine-grained test execution and reporting.
-- **Main-less Tests:** Linking against `GTest::gtest_main` removes the need to write a boilerplate `main()` function for the test runner.
+The workflow (`build.yml`) automates the following:
+1.  **Multi-Platform Build Matrix**:
+    - **Windows**: Uses `Visual Studio 17 2022` with the `ClangCL` toolset.
+    - **Linux**: Uses `ubuntu-20.04` with `Ninja` and `clang++`.
+    - **macOS (Intel & Silicon)**: Uses `macos-13` (x86_64) and `macos-14` (arm64) runners.
+2.  **Automated Testing**: Runs `ctest` on every push and pull request.
+3.  **Packaging**: Invokes `cpack` to create `.zip` (Windows) and `.tar.gz` (Unix) archives.
+4.  **Release Automation**: Automatically creates a GitHub Release and uploads all four archives when a `v*.*.*` tag is pushed.
