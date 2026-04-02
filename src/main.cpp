@@ -18,6 +18,13 @@
 //  10. spdlog                 – structured logging with coloured stdout sink
 //                              and a size-based rotating file sink; oldest
 //                              files deleted automatically when limit is reached
+//  11. Boost.URL              – parse, inspect, and mutate URIs
+//  12. Boost.UUID             – generate random (v4) and name-based (v5) UUIDs
+//  13. Boost.Process v2       – launch a child process, capture its stdout
+//  14. Boost.Stacktrace       – capture and print the current call stack
+//  15. Howard Hinnant's Date  – calendar date arithmetic on top of <chrono>
+//                              (core library only; no IANA timezone data needed)
+//  16. Vince's CSV Parser     – parse CSV data, access fields by column name
 // =============================================================================
 
 #include <algorithm>
@@ -36,6 +43,14 @@
 #include <boost/beast/http.hpp>
 #include <boost/json.hpp>
 #include <boost/program_options.hpp>
+#include <boost/url.hpp>
+#include <boost/uuid/uuid.hpp>
+#include <boost/uuid/uuid_generators.hpp>
+#include <boost/uuid/uuid_io.hpp>
+#include <boost/process/v2.hpp>
+#include <boost/stacktrace.hpp>
+#include <date/date.h>
+#include <csv.hpp>
 
 #include "math_utils.h"
 #include "embedded_resource.h"
@@ -324,6 +339,181 @@ static void demo_spdlog() {
     spdlog::drop("app");  // deregister so the demo can be re-run in the same process
 }
 
+// -----------------------------------------------------------------------------
+// 11. Boost.URL – parse, inspect, and mutate URIs
+// -----------------------------------------------------------------------------
+static void demo_boost_url() {
+    std::cout << "\n--- Boost.URL ---\n";
+    namespace urls = boost::urls;
+
+    // Parse to an immutable view (zero-copy; input string must remain alive)
+    const urls::url_view uv = urls::parse_uri(
+        "https://api.example.com:8443/v2/users?page=1&limit=50#results").value();
+
+    std::cout << "scheme   : " << uv.scheme()   << "\n";
+    std::cout << "host     : " << uv.host()     << "\n";
+    std::cout << "port     : " << uv.port()     << "\n";
+    std::cout << "path     : " << uv.path()     << "\n";
+    std::cout << "query    : " << uv.query()    << "\n";
+    std::cout << "fragment : " << uv.fragment() << "\n";
+
+    // Mutable url for building / modifying
+    urls::url u(uv);
+    u.set_path("/v3/users");
+    u.set_query("page=2&limit=25");
+    std::cout << "modified : " << u << "\n";
+}
+
+// -----------------------------------------------------------------------------
+// 12. Boost.UUID – random (v4) and name-based (v5) UUIDs
+// -----------------------------------------------------------------------------
+static void demo_boost_uuid() {
+    std::cout << "\n--- Boost.UUID ---\n";
+
+    // v4: cryptographically random
+    boost::uuids::random_generator rgen;
+    const auto id1 = rgen();
+    const auto id2 = rgen();
+    std::cout << "random uuid 1  : " << id1 << "\n";
+    std::cout << "random uuid 2  : " << id2 << "\n";
+    std::cout << "are equal      : " << (id1 == id2 ? "yes" : "no") << "\n";
+
+    // v5: name-based (SHA-1) – identical input always yields identical UUID
+    boost::uuids::name_generator_sha1 ngen(boost::uuids::ns::url());
+    const auto id3 = ngen("https://example.com");
+    const auto id4 = ngen("https://example.com");
+    std::cout << "name-based     : " << id3 << "\n";
+    std::cout << "reproducible   : " << (id3 == id4 ? "yes" : "no") << "\n";
+
+    // String round-trip
+    const std::string str = boost::uuids::to_string(id1);
+    const auto        id5 = boost::uuids::string_generator()(str);
+    std::cout << "string form    : " << str << "\n";
+    std::cout << "round-trip ok  : " << (id1 == id5 ? "yes" : "no") << "\n";
+}
+
+// -----------------------------------------------------------------------------
+// 13. Boost.Process v2 – launch a child process and capture its stdout
+// -----------------------------------------------------------------------------
+static void demo_boost_process() {
+    std::cout << "\n--- Boost.Process v2 ---\n";
+    namespace bp = boost::process::v2;
+
+    // cmake must be installed on any machine that can build this project.
+    const auto cmake_exe = bp::environment::find_executable("cmake");
+    if (cmake_exe.empty()) {
+        std::cout << "cmake not found in PATH; skipping\n";
+        return;
+    }
+    std::cout << "cmake path     : " << cmake_exe.string() << "\n";
+
+    net::io_context ioc;
+    boost::asio::readable_pipe rp{ioc};
+
+    // Redirect child stdout to the pipe; stdin and stderr are inherited.
+    bp::process_stdio stdio;
+    stdio.out = rp;
+
+    bp::process proc(ioc, cmake_exe, {"--version"}, stdio);
+
+    // Synchronous read until the child closes its end of the pipe (EOF).
+    std::string output;
+    boost::system::error_code ec;
+    boost::asio::read(rp, boost::asio::dynamic_buffer(output), ec);
+    // ec == boost::asio::error::eof here – expected, not an error.
+
+    const int code = proc.wait();
+
+    // Print only the first line ("cmake version X.Y.Z")
+    const auto nl = output.find('\n');
+    std::cout << "output         : "
+              << output.substr(0, nl != std::string::npos ? nl : output.size())
+              << "\n";
+    std::cout << "exit code      : " << code << "\n";
+}
+
+// -----------------------------------------------------------------------------
+// 14. Boost.Stacktrace – capture and print the current call stack
+// -----------------------------------------------------------------------------
+static void demo_stacktrace() {
+    std::cout << "\n--- Boost.Stacktrace ---\n";
+
+    // Captures the call stack at this point.
+    // Built with BOOST_STACKTRACE_USE_BASIC so no debug-info files are needed;
+    // each frame shows a raw address.  For human-readable names rebuild with:
+    //   Linux  : Boost::stacktrace_addr2line + BOOST_STACKTRACE_USE_ADDR2LINE
+    //   Windows: Boost::stacktrace_windbg    + BOOST_STACKTRACE_USE_WINDBG
+    const boost::stacktrace::stacktrace st;
+    std::cout << "frames captured: " << st.size() << "\n";
+
+    const std::size_t show = std::min(st.size(), std::size_t{5});
+    for (std::size_t i = 0; i < show; ++i) {
+        std::cout << "  [" << i << "] " << st[i] << "\n";
+    }
+    if (st.size() > show) {
+        std::cout << "  ... (" << (st.size() - show) << " more frames)\n";
+    }
+}
+
+// -----------------------------------------------------------------------------
+// 15. Howard Hinnant's Date library – calendar arithmetic on top of <chrono>
+//     (core library only; no IANA timezone database required)
+// -----------------------------------------------------------------------------
+static void demo_date() {
+    std::cout << "\n--- Howard Hinnant's Date library ---\n";
+    using namespace date;
+    using namespace std::chrono;
+
+    // today as a calendar date
+    const auto today = floor<days>(system_clock::now());
+    const auto ymd   = year_month_day{today};
+
+    std::cout << "today          : " << ymd << "\n";
+    std::cout << "year           : " << static_cast<int>(ymd.year())      << "\n";
+    std::cout << "month          : " << static_cast<unsigned>(ymd.month()) << "\n";
+    std::cout << "day            : " << static_cast<unsigned>(ymd.day())   << "\n";
+    std::cout << "day of week    : " << weekday{today} << "\n";
+
+    // arithmetic
+    std::cout << "in 7 days      : " << year_month_day{sys_days{today} + days{7}}  << "\n";
+    std::cout << "in 1 year      : " << (ymd.year() + years{1}) / ymd.month() / ymd.day() << "\n";
+
+    // days remaining until 1 Jan next year
+    const auto jan1_next  = (ymd.year() + years{1}) / January / 1;
+    const auto days_left  = (sys_days{jan1_next} - sys_days{today}).count();
+    std::cout << "days to Jan 1  : " << days_left << "\n";
+}
+
+// -----------------------------------------------------------------------------
+// 16. Vince's CSV Parser – parse CSV, access fields by column name
+// -----------------------------------------------------------------------------
+static void demo_csv() {
+    std::cout << "\n--- Vince's CSV Parser ---\n";
+
+    // Inline data keeps the demo self-contained (no file path dependency).
+    // To read a file instead: csv::CSVReader reader("path/to/file.csv");
+    const std::string csv_data =
+        "name,age,city\n"
+        "Alice,30,New York\n"
+        "Bob,25,London\n"
+        "Charlie,35,Tokyo\n";
+
+    auto reader = csv::parse(csv_data);
+
+    std::cout << "columns        : ";
+    for (const auto& col : reader.get_col_names()) {
+        std::cout << col << "  ";
+    }
+    std::cout << "\n";
+
+    for (auto& row : reader) {
+        std::cout << "  "
+                  << row["name"].get<std::string>() << ", "
+                  << "age " << row["age"].get<int>() << ", "
+                  << row["city"].get<std::string>()  << "\n";
+    }
+}
+
 // =============================================================================
 // main
 // =============================================================================
@@ -353,6 +543,12 @@ int main(int argc, char* argv[]) {
     demo_fp();
     demo_embedded_resource();
     demo_spdlog();
+    demo_boost_url();
+    demo_boost_uuid();
+    demo_boost_process();
+    demo_stacktrace();
+    demo_date();
+    demo_csv();
 
     return 0;
 }

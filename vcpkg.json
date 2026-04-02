@@ -5,7 +5,13 @@
     "boost-asio",
     "boost-beast",
     "boost-json",
+    "boost-process",
     "boost-program-options",
+    "boost-stacktrace",
+    "boost-url",
+    "boost-uuid",
+    "csv-parser",
+    "date",
     "gtest",
     "spdlog"
   ]

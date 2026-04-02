@@ -83,18 +83,34 @@ target_include_directories(${PROJECT_NAME}_lib PUBLIC
 #      (e.g. regex) and add Boost::<component> to target_link_libraries.
 #   3. If it is header-only, just add Boost::<name> to target_link_libraries.
 # ---------------------------------------------------------------------------
-find_package(Boost REQUIRED COMPONENTS json program_options)
+find_package(Boost REQUIRED COMPONENTS json program_options url stacktrace_basic)
 find_package(Threads REQUIRED)
-find_package(spdlog CONFIG REQUIRED)
+find_package(spdlog  CONFIG REQUIRED)
+find_package(date    CONFIG REQUIRED)
+find_package(csv-parser CONFIG REQUIRED)
 
 target_link_libraries(${PROJECT_NAME}_lib PUBLIC
     Boost::asio             # header-only; handles Winsock on Windows
     Boost::beast            # header-only; depends on Boost::asio
     Boost::json             # compiled
     Boost::program_options  # compiled
+    Boost::url              # compiled; URL parsing and manipulation
+    Boost::uuid             # header-only; UUID generation
+    Boost::process          # header-only; child-process management (v2)
+    Boost::stacktrace_basic # basic stack-capture (addresses; no debug symbols needed)
     Threads::Threads        # pthreads on Linux, built-in on Windows/macOS
     spdlog::spdlog_header_only  # header-only; no compiled spdlog library needed
+    date::date              # Howard Hinnant's date/calendar library (no TZ data)
+    csv::csv                # Vince's CSV parser
+    ${CMAKE_DL_LIBS}        # -ldl on Linux; empty on Windows/macOS; needed by stacktrace
 )
+
+# Boost.Stacktrace: use the basic backend (raw addresses) on all platforms.
+# It requires no external debug-info files and works in both Debug and Release.
+# To get symbolised names instead:
+#   Linux  : swap in Boost::stacktrace_addr2line + define BOOST_STACKTRACE_USE_ADDR2LINE
+#   Windows: swap in Boost::stacktrace_windbg    + define BOOST_STACKTRACE_USE_WINDBG
+target_compile_definitions(${PROJECT_NAME}_lib PUBLIC BOOST_STACKTRACE_USE_BASIC)
 
 # Tell Boost.Asio which minimum Windows API version to target.
 # 0x0A00 = Windows 10. Only relevant on Windows; ignored on other platforms.
@@ -117,6 +133,7 @@ target_precompile_headers(${PROJECT_NAME}_lib PRIVATE
     <boost/beast.hpp>
     <boost/json.hpp>
     <boost/program_options.hpp>
+    <boost/url.hpp>
     <spdlog/spdlog.h>
     # "src/my_header.h"   ← add your own frequently-used headers here
 )

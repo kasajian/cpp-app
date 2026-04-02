@@ -15,7 +15,7 @@ cpp-app/
 ├── data/
 │   └── sample.json        # Embedded at link time via llvm-objcopy
 ├── src/
-│   ├── main.cpp           # Demo entry point (10 library/feature sections)
+│   ├── main.cpp           # Demo entry point (16 library/feature sections)
 │   ├── math_utils.cpp     # Production logic (addition example)
 │   ├── math_utils.h
 │   ├── logger.h           # setup_logger() – multi-sink spdlog utility
@@ -39,7 +39,13 @@ The following libraries are managed via vcpkg in manifest mode:
 - **`boost-asio`**: Asynchronous networking and I/O.
 - **`boost-beast`**: HTTP and WebSocket library built on Asio.
 - **`boost-json`**: JSON parsing and serialization.
+- **`boost-process`**: Cross-platform child-process management (Boost.Process v2).
 - **`boost-program-options`**: Command-line argument parsing.
+- **`boost-stacktrace`**: Call-stack capture at runtime (basic backend; no debug symbols required).
+- **`boost-url`**: URI/URL parsing, inspection, and mutation.
+- **`boost-uuid`**: UUID generation — random (v4) and name-based/SHA-1 (v5).
+- **`csv-parser`**: Vince's CSV parser — reads CSV data from files or strings, accessed by column name.
+- **`date`**: Howard Hinnant's calendar date library — fills the C++17 gap for date arithmetic (`year_month_day`, weekday, date math). Core library only; no IANA timezone database required.
 - **`gtest`**: Google Test framework for unit testing.
 - **`spdlog`**: Structured logging with multiple sinks (coloured stdout and rotating file). Used header-only via `spdlog::spdlog_header_only`.
 
@@ -72,6 +78,12 @@ The entry point serves as a comprehensive "kitchen sink" demo of the integrated 
 8.  **Functional Programming**: Demonstrates `std::transform`, `std::copy_if`, and `std::reduce` (C++17).
 9.  **Embedded resource**: Reads `data/sample.json` that was baked into the executable at link time via `llvm-objcopy`. Accessed through linker symbols with no file I/O at runtime.
 10. **spdlog**: Creates a multi-sink logger (coloured stdout + rotating file). Demonstrates all four severity levels (debug/info/warn/error) with a timestamped, level-tagged pattern. The rotating file sink caps each file at 5 MB and auto-deletes the oldest when more than 3 files accumulate.
+11. **Boost.URL**: Parses a URI into components (scheme, host, port, path, query, fragment) via an immutable `url_view`, then mutates a copy using the `url` class.
+12. **Boost.UUID**: Generates random (v4) UUIDs and reproducible name-based (v5/SHA-1) UUIDs; demonstrates string serialisation and round-trip parsing.
+13. **Boost.Process v2**: Locates `cmake` via `find_executable`, spawns it with `--version`, captures its stdout through a `readable_pipe`, and reports the exit code.
+14. **Boost.Stacktrace**: Captures the current call stack and prints up to five frames. Built with the basic backend (raw addresses); comments show how to switch to a symbolising backend per platform.
+15. **Howard Hinnant's Date**: Converts the current `system_clock` instant to a `year_month_day`, performs calendar arithmetic (add 7 days, add 1 year), identifies the day of the week, and counts days to the next 1 January.
+16. **Vince's CSV Parser**: Parses inline CSV data (name/age/city), enumerates column names, and iterates rows accessing fields by name with typed `get<T>()`.
 
 ### `math_utils`
 Provides core production logic. Currently contains a basic `add(int, int)` function used to verify the static library linkage across production and test targets.
