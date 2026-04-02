@@ -36,6 +36,7 @@ Pre-built binaries are published automatically on every tagged release.
 | Windows 64-bit | `cpp_app-<version>-win64.zip` |
 | Linux 64-bit | `cpp_app-<version>-Linux.tar.gz` |
 | Android ARM64 (Termux) | `cpp_app-<version>-Android.tar.gz` |
+| WebAssembly (browser)  | `cpp_app-<version>-wasm.tar.gz` — extract and open `cpp_app.html` in any modern browser |
 | macOS Intel (x86_64) | `cpp_app-<version>-Darwin-x86_64.tar.gz` |
 | macOS Apple Silicon (arm64) | `cpp_app-<version>-Darwin-arm64.tar.gz` |
 

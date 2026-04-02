@@ -160,6 +160,19 @@ Provides core production logic. Currently contains a basic `add(int, int)` funct
 | Android NDK CI | Bundled in the NDK at `$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/.../bin/` |
 | Termux (on-device) | `pkg install llvm` |
 
+### WebAssembly / Emscripten
+**Decision:** Add a `wasm32-emscripten` build target using the Emscripten SDK, producing a self-contained `.html` + `.js` + `.wasm` bundle that runs in any modern browser.
+
+**What works / what doesn't:**
+- Demos 1–3, 5–6, 8–12, 15–16 run identically in the browser.
+- Demos 4 (Beast HTTP), 7 (threads), 13 (Process v2), and 14 (Stacktrace) are disabled via `#ifndef __EMSCRIPTEN__` because the browser sandbox has no raw TCP sockets, no `fork`/`exec`, and no stack-unwinding support.
+- The Boost.Asio timer (demo 3) works because `-sASYNCIFY` allows `ioc.run()` to suspend cooperatively instead of blocking the browser's event loop.
+- The embedded resource (demo 9) uses Emscripten's `--preload-file` to package `data/sample.json` into the virtual filesystem instead of the llvm-objcopy linker-symbol approach, which doesn't apply to wasm objects.
+
+**vcpkg:** `boost-beast`, `boost-process`, and `boost-stacktrace` are excluded from the `wasm32-emscripten` build via `"platform": "!wasm32"` in `vcpkg.json`.
+
+**CI testing:** Emscripten output also runs under Node.js, so `node cpp_app.js` serves as the test step — no browser or emulator required.
+
 ---
 
 ## 9. CI/CD Pipeline Blueprint (GitHub Actions)
@@ -170,6 +183,7 @@ The workflow (`build.yml`) automates the following:
     - **Linux**: Uses `ubuntu-20.04` with `Ninja` and `clang++`.
     - **macOS (Intel & Silicon)**: Uses `macos-13` (x86_64) and `macos-14` (arm64) runners.
     - **Android**: Uses `ubuntu-latest` with the Android NDK to cross-compile for `arm64-v8a`.
+    - **WebAssembly**: Uses `ubuntu-latest` with the Emscripten SDK to compile for `wasm32-emscripten`. Output is a `.html` + `.js` + `.wasm` bundle. Tested in CI via Node.js (no browser required).
 2.  **Automated Testing**: Runs `ctest` on every push and pull request.
 3.  **Packaging**: Invokes `cpack` to create `.zip` (Windows) and `.tar.gz` (Unix) archives.
 4.  **Release Automation**: Automatically creates a GitHub Release and uploads all four archives when a `v*.*.*` tag is pushed.

@@ -186,6 +186,58 @@ jobs:
           if-no-files-found: error
 
   # ---------------------------------------------------------------------------
+  # WebAssembly / Emscripten (runs in browser; tested via Node.js in CI)
+  # ---------------------------------------------------------------------------
+  build-emscripten:
+    name: WebAssembly (Emscripten)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Emscripten SDK
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: latest
+          actions-cache-folder: emsdk-cache
+
+      - name: Setup vcpkg
+        run: echo "VCPKG_ROOT=$VCPKG_INSTALLATION_ROOT" >> $GITHUB_ENV
+
+      - name: Configure CMake
+        run: >
+          cmake -S . -B build
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_TOOLCHAIN_FILE="${{ env.VCPKG_ROOT }}/scripts/buildsystems/vcpkg.cmake"
+          -DVCPKG_CHAINLOAD_TOOLCHAIN_FILE="$EMSDK/upstream/emscripten/cmake/Modules/Platform/Emscripten.cmake"
+          -DVCPKG_TARGET_TRIPLET=wasm32-emscripten
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test (via Node.js)
+        # Emscripten output runs under Node.js without a browser.
+        # -sEXIT_RUNTIME=1 ensures the process exits cleanly after main().
+        run: node build/bin/cpp_app.js
+
+      - name: Package
+        run: cpack --config CPackConfig.cmake -G TGZ
+        working-directory: build
+
+      - name: Rename artifact to include platform
+        run: |
+          cd build
+          for f in *.tar.gz; do
+            mv "$f" "${f%.tar.gz}-wasm.tar.gz"
+          done
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-wasm
+          path: build/*-wasm.tar.gz
+          if-no-files-found: error
+
+  # ---------------------------------------------------------------------------
   # Android / Termux ARM64 (NDK + vcpkg arm64-android)
   # ---------------------------------------------------------------------------
   build-android:
@@ -238,6 +290,7 @@ jobs:
       - build-macos-x64
       - build-macos-arm64
       - build-android
+      - build-emscripten
     runs-on: ubuntu-latest
     permissions:
       contents: write

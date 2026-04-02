@@ -83,7 +83,13 @@ target_include_directories(${PROJECT_NAME}_lib PUBLIC
 #      (e.g. regex) and add Boost::<component> to target_link_libraries.
 #   3. If it is header-only, just add Boost::<name> to target_link_libraries.
 # ---------------------------------------------------------------------------
-find_package(Boost REQUIRED COMPONENTS json program_options url stacktrace_basic)
+# Boost.Beast, Boost.Process v2, and Boost.Stacktrace are not available for
+# wasm32-emscripten (they require OS networking / process / unwind support).
+if(EMSCRIPTEN)
+    find_package(Boost REQUIRED COMPONENTS json program_options url)
+else()
+    find_package(Boost REQUIRED COMPONENTS json program_options url stacktrace_basic)
+endif()
 find_package(Threads REQUIRED)
 find_package(spdlog  CONFIG REQUIRED)
 find_package(date    CONFIG REQUIRED)
@@ -91,26 +97,30 @@ find_package(csv-parser CONFIG REQUIRED)
 
 target_link_libraries(${PROJECT_NAME}_lib PUBLIC
     Boost::asio             # header-only; handles Winsock on Windows
-    Boost::beast            # header-only; depends on Boost::asio
     Boost::json             # compiled
     Boost::program_options  # compiled
     Boost::url              # compiled; URL parsing and manipulation
     Boost::uuid             # header-only; UUID generation
-    Boost::process          # header-only; child-process management (v2)
-    Boost::stacktrace_basic # basic stack-capture (addresses; no debug symbols needed)
     Threads::Threads        # pthreads on Linux, built-in on Windows/macOS
     spdlog::spdlog_header_only  # header-only; no compiled spdlog library needed
     date::date              # Howard Hinnant's date/calendar library (no TZ data)
     csv::csv                # Vince's CSV parser
-    ${CMAKE_DL_LIBS}        # -ldl on Linux; empty on Windows/macOS; needed by stacktrace
 )
 
-# Boost.Stacktrace: use the basic backend (raw addresses) on all platforms.
-# It requires no external debug-info files and works in both Debug and Release.
-# To get symbolised names instead:
-#   Linux  : swap in Boost::stacktrace_addr2line + define BOOST_STACKTRACE_USE_ADDR2LINE
-#   Windows: swap in Boost::stacktrace_windbg    + define BOOST_STACKTRACE_USE_WINDBG
-target_compile_definitions(${PROJECT_NAME}_lib PUBLIC BOOST_STACKTRACE_USE_BASIC)
+# Libraries that require OS capabilities unavailable in the browser sandbox.
+if(NOT EMSCRIPTEN)
+    target_link_libraries(${PROJECT_NAME}_lib PUBLIC
+        Boost::beast            # header-only; HTTP/WebSocket (needs TCP sockets)
+        Boost::process          # header-only; child-process management (v2)
+        Boost::stacktrace_basic # basic stack-capture (no debug symbols needed)
+        ${CMAKE_DL_LIBS}        # -ldl on Linux; needed by stacktrace_basic
+    )
+    # Boost.Stacktrace: raw-address backend, works in Debug and Release.
+    # To get symbolised names:
+    #   Linux  : Boost::stacktrace_addr2line + BOOST_STACKTRACE_USE_ADDR2LINE
+    #   Windows: Boost::stacktrace_windbg    + BOOST_STACKTRACE_USE_WINDBG
+    target_compile_definitions(${PROJECT_NAME}_lib PUBLIC BOOST_STACKTRACE_USE_BASIC)
+endif()
 
 # Tell Boost.Asio which minimum Windows API version to target.
 # 0x0A00 = Windows 10. Only relevant on Windows; ignored on other platforms.
@@ -125,18 +135,22 @@ endif()
 #
 # Add any header that is included by most of your source files.
 # ---------------------------------------------------------------------------
-target_precompile_headers(${PROJECT_NAME}_lib PRIVATE
+# boost/beast.hpp is large and not available for wasm32-emscripten.
+set(_pch_headers
     <iostream>
     <string>
     <vector>
     <boost/asio.hpp>
-    <boost/beast.hpp>
     <boost/json.hpp>
     <boost/program_options.hpp>
     <boost/url.hpp>
     <spdlog/spdlog.h>
-    # "src/my_header.h"   ← add your own frequently-used headers here
 )
+if(NOT EMSCRIPTEN)
+    list(APPEND _pch_headers <boost/beast.hpp>)
+endif()
+target_precompile_headers(${PROJECT_NAME}_lib PRIVATE ${_pch_headers})
+unset(_pch_headers)
 
 # Compiler warnings
 if(MSVC)
@@ -159,106 +173,120 @@ target_sources(${PROJECT_NAME} PRIVATE
 target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}_lib)
 
 # ---------------------------------------------------------------------------
-# Embedded resource: data/sample.json linked into the binary at build time.
+# Embedded resource: data/sample.json
 #
-# llvm-objcopy --input-target binary converts an arbitrary file into a native
-# object (.o / .obj) that exports three linker symbols derived from the input
-# filename:
+# Native targets (Linux, macOS, Windows, Android):
+#   llvm-objcopy --input-target binary wraps the raw bytes in a native object
+#   file and exports linker symbols _binary_sample_json_start/end. The same
+#   extern "C" declaration in embedded_resource.cpp works on ELF, Mach-O, and
+#   COFF x64 because llvm-objcopy follows each format's C-linkage convention.
 #
-#   _binary_sample_json_start   first byte
-#   _binary_sample_json_end     one past the last byte
-#   _binary_sample_json_size    byte count as a linker symbol (use pointer
-#                               arithmetic: end - start, for portability)
-#
-# Running llvm-objcopy from the data/ directory means the input argument is
-# simply "sample.json", keeping the symbol names short and predictable.
-#
-# The same extern "C" declaration works on ELF (Linux/Android), Mach-O
-# (macOS), and COFF x64 (Windows) because llvm-objcopy follows each format's
-# C-linkage naming convention automatically.
-#
-# embedded_resource.cpp and the generated object are added directly to the
-# executable target (not the static library) so that the test runner, which
-# also links the library, does not see unresolved linker symbols.
+# WebAssembly / Emscripten:
+#   llvm-objcopy does not produce wasm-compatible objects. Instead, the entire
+#   data/ directory is pre-packaged into Emscripten's virtual filesystem via
+#   --preload-file at link time. embedded_resource.cpp has an #ifdef path that
+#   reads /data/sample.json through standard POSIX I/O at runtime.
 # ---------------------------------------------------------------------------
-find_program(LLVM_OBJCOPY
-    NAMES
-        llvm-objcopy
-        llvm-objcopy-18 llvm-objcopy-17 llvm-objcopy-16
-        llvm-objcopy-15 llvm-objcopy-14 llvm-objcopy-13 llvm-objcopy-12
-    HINTS
-        /usr/local/opt/llvm/bin         # macOS Homebrew (Intel runner, macos-13)
-        /opt/homebrew/opt/llvm/bin      # macOS Homebrew (ARM runner,   macos-14)
-        "C:/Program Files/LLVM/bin"     # Windows LLVM install
-        "$ENV{ANDROID_NDK_LATEST_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin"
-    DOC "llvm-objcopy used to embed binary resources at link time"
-)
+if(NOT EMSCRIPTEN)
+    find_program(LLVM_OBJCOPY
+        NAMES
+            llvm-objcopy
+            llvm-objcopy-18 llvm-objcopy-17 llvm-objcopy-16
+            llvm-objcopy-15 llvm-objcopy-14 llvm-objcopy-13 llvm-objcopy-12
+        HINTS
+            /usr/local/opt/llvm/bin         # macOS Homebrew (Intel runner, macos-13)
+            /opt/homebrew/opt/llvm/bin      # macOS Homebrew (ARM runner,   macos-14)
+            "C:/Program Files/LLVM/bin"     # Windows LLVM install
+            "$ENV{ANDROID_NDK_LATEST_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin"
+        DOC "llvm-objcopy used to embed binary resources at link time"
+    )
 
-if(NOT LLVM_OBJCOPY)
-    message(FATAL_ERROR
-        "llvm-objcopy not found. Install LLVM tools for your platform:\n"
-        "  Linux          : sudo apt-get install llvm\n"
-        "  macOS          : brew install llvm\n"
-        "  Windows        : install Visual Studio 'C++ Clang tools for Windows'\n"
-        "  Termux         : pkg install llvm\n"
-        "  Android NDK CI : ensure ANDROID_NDK_LATEST_HOME points to a valid NDK")
-endif()
-
-# Select the output object format and architecture for the current target.
-if(WIN32)
-    set(_EMBED_TARGET  "coff-x86-64")
-    set(_EMBED_ARCH    "i386:x86-64")
-    set(_EMBED_OBJ_EXT "obj")
-elseif(APPLE)
-    if(CMAKE_OSX_ARCHITECTURES MATCHES "arm64" OR
-       CMAKE_SYSTEM_PROCESSOR  MATCHES "arm64|aarch64")
-        set(_EMBED_TARGET "mach-o-arm64")
-        set(_EMBED_ARCH   "aarch64")
-    else()
-        set(_EMBED_TARGET "mach-o-x86-64")
-        set(_EMBED_ARCH   "i386:x86-64")
+    if(NOT LLVM_OBJCOPY)
+        message(FATAL_ERROR
+            "llvm-objcopy not found. Install LLVM tools for your platform:\n"
+            "  Linux          : sudo apt-get install llvm\n"
+            "  macOS          : brew install llvm\n"
+            "  Windows        : install Visual Studio 'C++ Clang tools for Windows'\n"
+            "  Termux         : pkg install llvm\n"
+            "  Android NDK CI : ensure ANDROID_NDK_LATEST_HOME points to a valid NDK")
     endif()
-    set(_EMBED_OBJ_EXT "o")
-elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
-    set(_EMBED_TARGET  "elf64-littleaarch64")
-    set(_EMBED_ARCH    "aarch64")
-    set(_EMBED_OBJ_EXT "o")
-else()  # Linux x86_64
-    set(_EMBED_TARGET  "elf64-x86-64")
-    set(_EMBED_ARCH    "i386:x86-64")
-    set(_EMBED_OBJ_EXT "o")
+
+    if(WIN32)
+        set(_EMBED_TARGET  "coff-x86-64")
+        set(_EMBED_ARCH    "i386:x86-64")
+        set(_EMBED_OBJ_EXT "obj")
+    elseif(APPLE)
+        if(CMAKE_OSX_ARCHITECTURES MATCHES "arm64" OR
+           CMAKE_SYSTEM_PROCESSOR  MATCHES "arm64|aarch64")
+            set(_EMBED_TARGET "mach-o-arm64")
+            set(_EMBED_ARCH   "aarch64")
+        else()
+            set(_EMBED_TARGET "mach-o-x86-64")
+            set(_EMBED_ARCH   "i386:x86-64")
+        endif()
+        set(_EMBED_OBJ_EXT "o")
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
+        set(_EMBED_TARGET  "elf64-littleaarch64")
+        set(_EMBED_ARCH    "aarch64")
+        set(_EMBED_OBJ_EXT "o")
+    else()  # Linux x86_64
+        set(_EMBED_TARGET  "elf64-x86-64")
+        set(_EMBED_ARCH    "i386:x86-64")
+        set(_EMBED_OBJ_EXT "o")
+    endif()
+
+    set(_EMBED_OBJ "${CMAKE_CURRENT_BINARY_DIR}/sample_json.${_EMBED_OBJ_EXT}")
+
+    add_custom_command(
+        OUTPUT   "${_EMBED_OBJ}"
+        COMMAND  "${LLVM_OBJCOPY}"
+                 --input-target          binary
+                 --output-target         "${_EMBED_TARGET}"
+                 --binary-architecture   "${_EMBED_ARCH}"
+                 "sample.json"
+                 "${_EMBED_OBJ}"
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/data"
+        DEPENDS   "${CMAKE_SOURCE_DIR}/data/sample.json"
+        COMMENT   "Embedding data/sample.json (${_EMBED_TARGET}) via llvm-objcopy"
+        VERBATIM
+    )
+
+    set_source_files_properties("${_EMBED_OBJ}" PROPERTIES
+        EXTERNAL_OBJECT TRUE
+        GENERATED       TRUE
+    )
+
+    target_sources(${PROJECT_NAME} PRIVATE
+        src/embedded_resource.cpp
+        "${_EMBED_OBJ}"
+    )
+
+else()  # EMSCRIPTEN
+    # No linker-symbol embedding; the file is loaded from the virtual FS.
+    target_sources(${PROJECT_NAME} PRIVATE src/embedded_resource.cpp)
 endif()
-
-set(_EMBED_OBJ "${CMAKE_CURRENT_BINARY_DIR}/sample_json.${_EMBED_OBJ_EXT}")
-
-add_custom_command(
-    OUTPUT   "${_EMBED_OBJ}"
-    COMMAND  "${LLVM_OBJCOPY}"
-             --input-target          binary
-             --output-target         "${_EMBED_TARGET}"
-             --binary-architecture   "${_EMBED_ARCH}"
-             "sample.json"
-             "${_EMBED_OBJ}"
-    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/data"
-    DEPENDS   "${CMAKE_SOURCE_DIR}/data/sample.json"
-    COMMENT   "Embedding data/sample.json (${_EMBED_TARGET}) via llvm-objcopy"
-    VERBATIM
-)
-
-set_source_files_properties("${_EMBED_OBJ}" PROPERTIES
-    EXTERNAL_OBJECT TRUE
-    GENERATED       TRUE
-)
-
-target_sources(${PROJECT_NAME} PRIVATE
-    src/embedded_resource.cpp
-    "${_EMBED_OBJ}"
-)
 
 # ---------------------------------------------------------------------------
 # Platform-specific link flags to maximise self-containment
 # ---------------------------------------------------------------------------
-if(WIN32)
+if(EMSCRIPTEN)
+    # Produce a self-contained bundle: HTML page + JS glue + WASM binary.
+    # Open cpp_app.html in any modern browser to run the application with a
+    # simulated terminal provided by Emscripten's default shell page.
+    set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".html")
+
+    target_link_options(${PROJECT_NAME} PRIVATE
+        -sASYNCIFY               # suspend/resume for blocking calls (e.g. ioc.run())
+        -sALLOW_MEMORY_GROWTH=1  # heap grows on demand
+        -sINITIAL_MEMORY=67108864 # 64 MB initial heap
+        -sEXIT_RUNTIME=1         # flush I/O and run destructors on exit
+        # Pre-package the data/ directory into the virtual filesystem so that
+        # embedded_resource.cpp can read /data/sample.json at runtime without
+        # any fetch/XHR – the bytes ship inside the generated .data bundle.
+        "SHELL:--preload-file ${CMAKE_SOURCE_DIR}/data@/data"
+    )
+
+elseif(WIN32)
     # With MinGW we can pass -static to pull in libgcc and libstdc++.
     if(MINGW)
         target_link_options(${PROJECT_NAME} PRIVATE -static)
@@ -289,18 +317,35 @@ endif()
 
 # ---------------------------------------------------------------------------
 # Tests
-# enable_testing() must be called here (the root CMakeLists.txt), not inside
-# the subdirectory, for CTest to register and discover tests correctly.
+# Skipped for EMSCRIPTEN: the test runner is a native binary and cannot
+# execute inside the WASM sandbox without a browser or Node.js host.
+# enable_testing() must be called in the root CMakeLists.txt (not inside the
+# subdirectory) for CTest to register and discover tests correctly.
 # ---------------------------------------------------------------------------
-enable_testing()
-add_subdirectory(tests)
+if(NOT EMSCRIPTEN)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
 
 # ---------------------------------------------------------------------------
 # Install rules (used by CPack / GitHub Actions packaging)
 # ---------------------------------------------------------------------------
-install(TARGETS ${PROJECT_NAME}
-    RUNTIME DESTINATION .
-)
+if(EMSCRIPTEN)
+    # Install the full WASM bundle: HTML shell, JS glue, WASM binary, and the
+    # pre-packaged virtual-FS data file generated by --preload-file.
+    install(DIRECTORY "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/"
+        DESTINATION .
+        FILES_MATCHING
+            PATTERN "*.html"
+            PATTERN "*.js"
+            PATTERN "*.wasm"
+            PATTERN "*.data"
+    )
+else()
+    install(TARGETS ${PROJECT_NAME}
+        RUNTIME DESTINATION .
+    )
+endif()
 
 # ---------------------------------------------------------------------------
 # CPack – creates a simple ZIP/TGZ archive of the installed files
@@ -308,7 +353,10 @@ install(TARGETS ${PROJECT_NAME}
 set(CPACK_PACKAGE_NAME "${PROJECT_NAME}")
 set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "${PROJECT_DESCRIPTION}")
-set(CPACK_STRIP_FILES TRUE)
+
+if(NOT EMSCRIPTEN)
+    set(CPACK_STRIP_FILES TRUE)  # strip native binaries; not applicable to WASM
+endif()
 
 if(WIN32)
     set(CPACK_GENERATOR "ZIP")

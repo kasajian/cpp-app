@@ -2,6 +2,43 @@
 
 #include <cstddef>
 
+#ifdef __EMSCRIPTEN__
+
+// ---------------------------------------------------------------------------
+// WebAssembly / Emscripten build
+//
+// llvm-objcopy cannot produce a wasm-compatible object file, so the native
+// linker-symbol approach is unavailable here.  Instead, CMakeLists.txt passes
+//   --preload-file <src>/data@/data
+// to the Emscripten linker, which packages the entire data/ directory into the
+// generated .data bundle and mounts it at /data/ inside the virtual filesystem
+// at startup.  Standard POSIX I/O can then read /data/sample.json normally.
+// ---------------------------------------------------------------------------
+
+#include <fstream>
+#include <sstream>
+#include <stdexcept>
+
+std::string_view get_embedded_sample_json() {
+    static const std::string cached = []() {
+        std::ifstream f("/data/sample.json");
+        if (!f) {
+            throw std::runtime_error(
+                "embedded resource: /data/sample.json not found in virtual FS; "
+                "ensure --preload-file was passed to the Emscripten linker");
+        }
+        std::ostringstream ss;
+        ss << f.rdbuf();
+        return ss.str();
+    }();
+    return cached;
+}
+
+#else
+
+// ---------------------------------------------------------------------------
+// Native build (Linux, macOS, Windows, Android)
+//
 // llvm-objcopy --input-target binary generates three linker symbols from the
 // source filename ("sample.json" → characters mapped to valid identifier chars):
 //
@@ -35,3 +72,5 @@ std::string_view get_embedded_sample_json() {
             _binary_sample_json_end - _binary_sample_json_start)
     };
 }
+
+#endif

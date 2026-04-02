@@ -39,18 +39,22 @@
 #include <vector>
 
 #include <boost/asio.hpp>
-#include <boost/beast.hpp>
-#include <boost/beast/http.hpp>
 #include <boost/json.hpp>
 #include <boost/program_options.hpp>
 #include <boost/url.hpp>
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include <boost/uuid/uuid_io.hpp>
-#include <boost/process/v2.hpp>
-#include <boost/stacktrace.hpp>
 #include <date/date.h>
 #include <csv.hpp>
+
+// These libraries require OS capabilities absent from the browser sandbox.
+#ifndef __EMSCRIPTEN__
+#include <boost/beast.hpp>
+#include <boost/beast/http.hpp>
+#include <boost/process/v2.hpp>
+#include <boost/stacktrace.hpp>
+#endif
 
 #include "math_utils.h"
 #include "embedded_resource.h"
@@ -137,8 +141,9 @@ static void demo_asio_timer() {
 }
 
 // -----------------------------------------------------------------------------
-// 4. Boost.Beast – synchronous HTTP GET
+// 4. Boost.Beast – synchronous HTTP GET  (skipped on WebAssembly: no raw TCP)
 // -----------------------------------------------------------------------------
+#ifndef __EMSCRIPTEN__
 static void demo_beast_http() {
     std::cout << "\n--- Boost.Beast: HTTP GET example.com ---\n";
     try {
@@ -173,6 +178,7 @@ static void demo_beast_http() {
         std::cout << "skipped (no network or DNS): " << e.what() << "\n";
     }
 }
+#endif // !__EMSCRIPTEN__
 
 // -----------------------------------------------------------------------------
 // 5. std::filesystem
@@ -218,8 +224,9 @@ static void demo_regex() {
 }
 
 // -----------------------------------------------------------------------------
-// 7. std::thread / std::future
+// 7. std::thread / std::future  (skipped on WebAssembly: no pthreads by default)
 // -----------------------------------------------------------------------------
+#ifndef __EMSCRIPTEN__
 static void demo_thread_future() {
     std::cout << "\n--- std::thread / std::future ---\n";
 
@@ -241,6 +248,7 @@ static void demo_thread_future() {
     });
     t.join();
 }
+#endif // !__EMSCRIPTEN__
 
 // -----------------------------------------------------------------------------
 // 8. FP – map / filter / reduce
@@ -393,8 +401,9 @@ static void demo_boost_uuid() {
 }
 
 // -----------------------------------------------------------------------------
-// 13. Boost.Process v2 – launch a child process and capture its stdout
+// 13. Boost.Process v2  (skipped on WebAssembly: no process spawning)
 // -----------------------------------------------------------------------------
+#ifndef __EMSCRIPTEN__
 static void demo_boost_process() {
     std::cout << "\n--- Boost.Process v2 ---\n";
     namespace bp = boost::process::v2;
@@ -431,10 +440,12 @@ static void demo_boost_process() {
               << "\n";
     std::cout << "exit code      : " << code << "\n";
 }
+#endif // !__EMSCRIPTEN__
 
 // -----------------------------------------------------------------------------
-// 14. Boost.Stacktrace – capture and print the current call stack
+// 14. Boost.Stacktrace  (skipped on WebAssembly: no stack unwinding support)
 // -----------------------------------------------------------------------------
+#ifndef __EMSCRIPTEN__
 static void demo_stacktrace() {
     std::cout << "\n--- Boost.Stacktrace ---\n";
 
@@ -454,6 +465,7 @@ static void demo_stacktrace() {
         std::cout << "  ... (" << (st.size() - show) << " more frames)\n";
     }
 }
+#endif // !__EMSCRIPTEN__
 
 // -----------------------------------------------------------------------------
 // 15. Howard Hinnant's Date library – calendar arithmetic on top of <chrono>
@@ -536,17 +548,23 @@ int main(int argc, char* argv[]) {
 
     demo_json();
     demo_asio_timer();
+#ifndef __EMSCRIPTEN__
     demo_beast_http();
+#endif
     demo_filesystem();
     demo_regex();
+#ifndef __EMSCRIPTEN__
     demo_thread_future();
+#endif
     demo_fp();
     demo_embedded_resource();
     demo_spdlog();
     demo_boost_url();
     demo_boost_uuid();
+#ifndef __EMSCRIPTEN__
     demo_boost_process();
     demo_stacktrace();
+#endif
     demo_date();
     demo_csv();
 
