@@ -146,9 +146,10 @@ The binary is at `build\bin\cpp_app.exe`.
 
 **One-time setup**
 
-1. Install Xcode Command Line Tools (provides Apple Clang):
+1. Install Xcode Command Line Tools (provides Apple Clang) and LLVM tools:
    ```bash
    xcode-select --install
+   brew install llvm
    ```
 
 2. Install vcpkg and set the environment variable:
@@ -181,10 +182,10 @@ The binary is at `build/bin/cpp_app`.
 
 **One-time setup**
 
-1. Install Clang and the supporting build tools:
+1. Install Clang, LLVM tools, and the supporting build tools:
    ```bash
    sudo apt-get update
-   sudo apt-get install -y build-essential clang cmake ninja-build
+   sudo apt-get install -y build-essential clang llvm cmake ninja-build
    ```
 
 2. Install vcpkg and set the environment variable:

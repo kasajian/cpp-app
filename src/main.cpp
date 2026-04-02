@@ -12,6 +12,9 @@
 //   8. FP (std::transform /  – map, filter, reduce over a vector
 //          std::copy_if /
 //          std::reduce)
+//   9. Embedded resource     – binary file linked into the executable at build
+//                              time via llvm-objcopy; accessed through linker
+//                              symbols with no file I/O at runtime
 // =============================================================================
 
 #include <algorithm>
@@ -32,6 +35,7 @@
 #include <boost/program_options.hpp>
 
 #include "math_utils.h"
+#include "embedded_resource.h"
 
 namespace fs  = std::filesystem;
 namespace po  = boost::program_options;
@@ -265,6 +269,33 @@ static void demo_fp() {
     std::cout << "sum of squares of evens: " << even_square_sum << "\n";
 }
 
+// -----------------------------------------------------------------------------
+// 9. Embedded resource – binary file linked in at build time via llvm-objcopy
+// -----------------------------------------------------------------------------
+static void demo_embedded_resource() {
+    std::cout << "\n--- Embedded resource (llvm-objcopy, no file I/O) ---\n";
+
+    // get_embedded_sample_json() returns a string_view directly into the
+    // executable's read-only data segment – no heap allocation, no file open.
+    const std::string_view raw = get_embedded_sample_json();
+    std::cout << "embedded size  : " << raw.size() << " bytes\n";
+
+    // Parse the embedded bytes as JSON using Boost.JSON (already linked in).
+    const json::value  doc = json::parse(raw);
+    const json::object& obj = doc.as_object();
+
+    std::cout << "application    : " << obj.at("application").as_string() << "\n";
+    std::cout << "description    : " << obj.at("description").as_string() << "\n";
+
+    const json::array& features =
+        obj.at("settings").as_object().at("features").as_array();
+    std::cout << "features       : ";
+    for (const auto& f : features) {
+        std::cout << f.as_string() << " ";
+    }
+    std::cout << "\n";
+}
+
 // =============================================================================
 // main
 // =============================================================================
@@ -292,6 +323,7 @@ int main(int argc, char* argv[]) {
     demo_regex();
     demo_thread_future();
     demo_fp();
+    demo_embedded_resource();
 
     return 0;
 }

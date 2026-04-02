@@ -139,6 +139,103 @@ target_sources(${PROJECT_NAME} PRIVATE
 target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}_lib)
 
 # ---------------------------------------------------------------------------
+# Embedded resource: data/sample.json linked into the binary at build time.
+#
+# llvm-objcopy --input-target binary converts an arbitrary file into a native
+# object (.o / .obj) that exports three linker symbols derived from the input
+# filename:
+#
+#   _binary_sample_json_start   first byte
+#   _binary_sample_json_end     one past the last byte
+#   _binary_sample_json_size    byte count as a linker symbol (use pointer
+#                               arithmetic: end - start, for portability)
+#
+# Running llvm-objcopy from the data/ directory means the input argument is
+# simply "sample.json", keeping the symbol names short and predictable.
+#
+# The same extern "C" declaration works on ELF (Linux/Android), Mach-O
+# (macOS), and COFF x64 (Windows) because llvm-objcopy follows each format's
+# C-linkage naming convention automatically.
+#
+# embedded_resource.cpp and the generated object are added directly to the
+# executable target (not the static library) so that the test runner, which
+# also links the library, does not see unresolved linker symbols.
+# ---------------------------------------------------------------------------
+find_program(LLVM_OBJCOPY
+    NAMES
+        llvm-objcopy
+        llvm-objcopy-18 llvm-objcopy-17 llvm-objcopy-16
+        llvm-objcopy-15 llvm-objcopy-14 llvm-objcopy-13 llvm-objcopy-12
+    HINTS
+        /usr/local/opt/llvm/bin         # macOS Homebrew (Intel runner, macos-13)
+        /opt/homebrew/opt/llvm/bin      # macOS Homebrew (ARM runner,   macos-14)
+        "C:/Program Files/LLVM/bin"     # Windows LLVM install
+        "$ENV{ANDROID_NDK_LATEST_HOME}/toolchains/llvm/prebuilt/linux-x86_64/bin"
+    DOC "llvm-objcopy used to embed binary resources at link time"
+)
+
+if(NOT LLVM_OBJCOPY)
+    message(FATAL_ERROR
+        "llvm-objcopy not found. Install LLVM tools for your platform:\n"
+        "  Linux          : sudo apt-get install llvm\n"
+        "  macOS          : brew install llvm\n"
+        "  Windows        : install Visual Studio 'C++ Clang tools for Windows'\n"
+        "  Termux         : pkg install llvm\n"
+        "  Android NDK CI : ensure ANDROID_NDK_LATEST_HOME points to a valid NDK")
+endif()
+
+# Select the output object format and architecture for the current target.
+if(WIN32)
+    set(_EMBED_TARGET  "coff-x86-64")
+    set(_EMBED_ARCH    "i386:x86-64")
+    set(_EMBED_OBJ_EXT "obj")
+elseif(APPLE)
+    if(CMAKE_OSX_ARCHITECTURES MATCHES "arm64" OR
+       CMAKE_SYSTEM_PROCESSOR  MATCHES "arm64|aarch64")
+        set(_EMBED_TARGET "mach-o-arm64")
+        set(_EMBED_ARCH   "aarch64")
+    else()
+        set(_EMBED_TARGET "mach-o-x86-64")
+        set(_EMBED_ARCH   "i386:x86-64")
+    endif()
+    set(_EMBED_OBJ_EXT "o")
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Android")
+    set(_EMBED_TARGET  "elf64-littleaarch64")
+    set(_EMBED_ARCH    "aarch64")
+    set(_EMBED_OBJ_EXT "o")
+else()  # Linux x86_64
+    set(_EMBED_TARGET  "elf64-x86-64")
+    set(_EMBED_ARCH    "i386:x86-64")
+    set(_EMBED_OBJ_EXT "o")
+endif()
+
+set(_EMBED_OBJ "${CMAKE_CURRENT_BINARY_DIR}/sample_json.${_EMBED_OBJ_EXT}")
+
+add_custom_command(
+    OUTPUT   "${_EMBED_OBJ}"
+    COMMAND  "${LLVM_OBJCOPY}"
+             --input-target          binary
+             --output-target         "${_EMBED_TARGET}"
+             --binary-architecture   "${_EMBED_ARCH}"
+             "sample.json"
+             "${_EMBED_OBJ}"
+    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}/data"
+    DEPENDS   "${CMAKE_SOURCE_DIR}/data/sample.json"
+    COMMENT   "Embedding data/sample.json (${_EMBED_TARGET}) via llvm-objcopy"
+    VERBATIM
+)
+
+set_source_files_properties("${_EMBED_OBJ}" PROPERTIES
+    EXTERNAL_OBJECT TRUE
+    GENERATED       TRUE
+)
+
+target_sources(${PROJECT_NAME} PRIVATE
+    src/embedded_resource.cpp
+    "${_EMBED_OBJ}"
+)
+
+# ---------------------------------------------------------------------------
 # Platform-specific link flags to maximise self-containment
 # ---------------------------------------------------------------------------
 if(WIN32)

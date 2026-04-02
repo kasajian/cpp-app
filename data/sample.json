@@ -1,0 +1,10 @@
+{
+    "application": "cpp_app",
+    "version": "1.0.0",
+    "description": "This file is embedded into the executable at link time via llvm-objcopy.",
+    "settings": {
+        "max_connections": 100,
+        "timeout_ms": 5000,
+        "features": ["embedded_resources", "static_linking", "cross_platform"]
+    }
+}

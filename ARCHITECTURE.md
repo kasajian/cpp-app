@@ -11,11 +11,15 @@ The repository is organized into a modular structure that separates production l
 ```text
 cpp-app/
 ├── .github/workflows/
-│   └── build.yml          # Multi-platform CI/CD (Windows, Linux, macOS)
+│   └── build.yml          # Multi-platform CI/CD (Windows, Linux, macOS, Android)
+├── data/
+│   └── sample.json        # Embedded at link time via llvm-objcopy
 ├── src/
-│   ├── main.cpp           # Demo entry point (8 library sections)
+│   ├── main.cpp           # Demo entry point (9 library/feature sections)
 │   ├── math_utils.cpp     # Production logic (addition example)
-│   └── math_utils.h
+│   ├── math_utils.h
+│   ├── embedded_resource.cpp  # Accesses linker symbols from the embedded object
+│   └── embedded_resource.h   # get_embedded_sample_json() API
 ├── tests/
 │   ├── CMakeLists.txt     # Test target configuration
 │   └── test_math_utils.cpp # GTest cases for math_utils
@@ -64,6 +68,7 @@ The entry point serves as a comprehensive "kitchen sink" demo of the integrated 
 6.  **std::regex**: Searches for IP patterns and extracts numbers from text.
 7.  **std::thread / std::future**: Executes `math_utils::add` asynchronously via `std::async`.
 8.  **Functional Programming**: Demonstrates `std::transform`, `std::copy_if`, and `std::reduce` (C++17).
+9.  **Embedded resource**: Reads `data/sample.json` that was baked into the executable at link time via `llvm-objcopy`. Accessed through linker symbols with no file I/O at runtime.
 
 ### `math_utils`
 Provides core production logic. Currently contains a basic `add(int, int)` function used to verify the static library linkage across production and test targets.
@@ -110,7 +115,39 @@ Provides core production logic. Currently contains a basic `add(int, int)` funct
 
 ---
 
-## 8. CI/CD Pipeline Blueprint (GitHub Actions)
+## 8. Linker-Embedded Binary Resources
+
+**Decision:** Use `llvm-objcopy --input-target binary` to convert arbitrary files (e.g. `data/sample.json`) into native object files at build time, then link them directly into the executable.
+
+**How it works:**
+1. CMake's `add_custom_command` invokes `llvm-objcopy` during the build step.
+2. `llvm-objcopy` wraps the raw bytes in a platform-native object file (ELF / Mach-O / COFF) and synthesises three linker symbols derived from the source filename:
+   - `_binary_sample_json_start` — pointer to the first byte
+   - `_binary_sample_json_end` — pointer one past the last byte
+   - `_binary_sample_json_size` — byte count as a linker symbol
+3. `embedded_resource.cpp` declares these as `extern "C"` symbols and exposes them through `get_embedded_sample_json()`, which returns a `std::string_view` directly into the executable's read-only data segment.
+
+**Why `llvm-objcopy` and not alternatives:**
+- **Not source-code encoding** (e.g. hex arrays, base64): no round-trip conversion; the raw bytes are always in sync with the source file.
+- **Not GNU ld `--format=binary`**: that is a GNU ld extension unsupported by Apple `ld` and MSVC `link.exe`.
+- **Not assembly `.incbin`**: would require platform-specific assembly syntax and a separate `.S` file.
+- **`llvm-objcopy` is cross-platform**: the same tool and the same `extern "C"` declaration work on ELF (Linux/Android), Mach-O (macOS), and COFF x64 (Windows) because `llvm-objcopy` follows each format's C-linkage naming convention automatically.
+
+**Symbol placement:** `embedded_resource.cpp` and the generated object are added to the **executable** target directly (not to `${PROJECT_NAME}_lib`) so the test runner, which also links the library, does not encounter unresolved symbols for data it never uses.
+
+**Tool availability per platform:**
+
+| Platform | Source of `llvm-objcopy` |
+|---|---|
+| Linux | `sudo apt-get install llvm` |
+| macOS | `brew install llvm` (pre-installed on GitHub-hosted runners) |
+| Windows | Ships with Visual Studio "C++ Clang tools for Windows" |
+| Android NDK CI | Bundled in the NDK at `$ANDROID_NDK_LATEST_HOME/toolchains/llvm/prebuilt/.../bin/` |
+| Termux (on-device) | `pkg install llvm` |
+
+---
+
+## 9. CI/CD Pipeline Blueprint (GitHub Actions)
 
 The workflow (`build.yml`) automates the following:
 1.  **Multi-Platform Build Matrix**:

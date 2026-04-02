@@ -65,7 +65,7 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends \
-            cmake build-essential ninja-build clang \
+            cmake build-essential ninja-build clang llvm \
             curl zip unzip tar pkg-config
 
       - name: Setup vcpkg
