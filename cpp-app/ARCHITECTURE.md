@@ -98,7 +98,7 @@ Provides core production logic. Currently contains a basic `add(int, int)` funct
 
 ### macOS: dead_strip
 **Decision:** Pass `LINKER:-dead_strip` and target **macOS 12.0**.
-- **Rationale:** Removes unreachable code to minimize binary size.
+- **Rationale:** Removes unreachable code to minimize binary size. The resulting **x86_64 binary** is also compatible with **Darling**, enabling it to run on Linux environments that support the Darling translation layer.
 
 ### Windows: Static CRT (/MT)
 **Decision:** Force `/MT` in Release builds and use the `x64-windows-static` vcpkg triplet.
