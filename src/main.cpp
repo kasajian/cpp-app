@@ -15,6 +15,9 @@
 //   9. Embedded resource     – binary file linked into the executable at build
 //                              time via llvm-objcopy; accessed through linker
 //                              symbols with no file I/O at runtime
+//  10. spdlog                 – structured logging with coloured stdout sink
+//                              and a size-based rotating file sink; oldest
+//                              files deleted automatically when limit is reached
 // =============================================================================
 
 #include <algorithm>
@@ -36,6 +39,7 @@
 
 #include "math_utils.h"
 #include "embedded_resource.h"
+#include "logger.h"
 
 namespace fs  = std::filesystem;
 namespace po  = boost::program_options;
@@ -296,6 +300,30 @@ static void demo_embedded_resource() {
     std::cout << "\n";
 }
 
+// -----------------------------------------------------------------------------
+// 10. spdlog – structured logging with multiple sinks and log rotation
+// -----------------------------------------------------------------------------
+static void demo_spdlog() {
+    std::cout << "\n--- spdlog: structured logging + rotating file sink ---\n";
+
+    // Write logs to a temp subdirectory so the demo works from any cwd.
+    const fs::path log_dir = fs::temp_directory_path() / "cpp_app_demo_logs";
+    auto log = setup_logger(log_dir);
+
+    std::cout << "log directory  : " << log_dir.string() << "\n";
+    std::cout << "rotation policy: 5 MB max per file, 3 files kept\n\n";
+
+    // All four severity levels.  The pattern written to both sinks is:
+    //   [2026-04-02 09:00:00.123] [INFO ]  message
+    log->debug("debug: detailed diagnostic – usually disabled in production");
+    log->info ("info:  server listening on port {}", 8080);
+    log->warn ("warn:  disk usage at {}%, consider archiving old data", 87);
+    log->error("error: failed to open config file, falling back to defaults");
+
+    log->flush();
+    spdlog::drop("app");  // deregister so the demo can be re-run in the same process
+}
+
 // =============================================================================
 // main
 // =============================================================================
@@ -324,6 +352,7 @@ int main(int argc, char* argv[]) {
     demo_thread_future();
     demo_fp();
     demo_embedded_resource();
+    demo_spdlog();
 
     return 0;
 }

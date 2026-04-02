@@ -85,6 +85,7 @@ target_include_directories(${PROJECT_NAME}_lib PUBLIC
 # ---------------------------------------------------------------------------
 find_package(Boost REQUIRED COMPONENTS json program_options)
 find_package(Threads REQUIRED)
+find_package(spdlog CONFIG REQUIRED)
 
 target_link_libraries(${PROJECT_NAME}_lib PUBLIC
     Boost::asio             # header-only; handles Winsock on Windows
@@ -92,6 +93,7 @@ target_link_libraries(${PROJECT_NAME}_lib PUBLIC
     Boost::json             # compiled
     Boost::program_options  # compiled
     Threads::Threads        # pthreads on Linux, built-in on Windows/macOS
+    spdlog::spdlog_header_only  # header-only; no compiled spdlog library needed
 )
 
 # Tell Boost.Asio which minimum Windows API version to target.
@@ -115,6 +117,7 @@ target_precompile_headers(${PROJECT_NAME}_lib PRIVATE
     <boost/beast.hpp>
     <boost/json.hpp>
     <boost/program_options.hpp>
+    <spdlog/spdlog.h>
     # "src/my_header.h"   ← add your own frequently-used headers here
 )
 

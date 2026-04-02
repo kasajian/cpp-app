@@ -6,6 +6,7 @@
     "boost-beast",
     "boost-json",
     "boost-program-options",
-    "gtest"
+    "gtest",
+    "spdlog"
   ]
 }

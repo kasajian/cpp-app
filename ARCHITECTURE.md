@@ -15,9 +15,10 @@ cpp-app/
 ├── data/
 │   └── sample.json        # Embedded at link time via llvm-objcopy
 ├── src/
-│   ├── main.cpp           # Demo entry point (9 library/feature sections)
+│   ├── main.cpp           # Demo entry point (10 library/feature sections)
 │   ├── math_utils.cpp     # Production logic (addition example)
 │   ├── math_utils.h
+│   ├── logger.h           # setup_logger() – multi-sink spdlog utility
 │   ├── embedded_resource.cpp  # Accesses linker symbols from the embedded object
 │   └── embedded_resource.h   # get_embedded_sample_json() API
 ├── tests/
@@ -40,6 +41,7 @@ The following libraries are managed via vcpkg in manifest mode:
 - **`boost-json`**: JSON parsing and serialization.
 - **`boost-program-options`**: Command-line argument parsing.
 - **`gtest`**: Google Test framework for unit testing.
+- **`spdlog`**: Structured logging with multiple sinks (coloured stdout and rotating file). Used header-only via `spdlog::spdlog_header_only`.
 
 ---
 
@@ -69,6 +71,7 @@ The entry point serves as a comprehensive "kitchen sink" demo of the integrated 
 7.  **std::thread / std::future**: Executes `math_utils::add` asynchronously via `std::async`.
 8.  **Functional Programming**: Demonstrates `std::transform`, `std::copy_if`, and `std::reduce` (C++17).
 9.  **Embedded resource**: Reads `data/sample.json` that was baked into the executable at link time via `llvm-objcopy`. Accessed through linker symbols with no file I/O at runtime.
+10. **spdlog**: Creates a multi-sink logger (coloured stdout + rotating file). Demonstrates all four severity levels (debug/info/warn/error) with a timestamped, level-tagged pattern. The rotating file sink caps each file at 5 MB and auto-deletes the oldest when more than 3 files accumulate.
 
 ### `math_utils`
 Provides core production logic. Currently contains a basic `add(int, int)` function used to verify the static library linkage across production and test targets.
