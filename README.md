@@ -111,20 +111,36 @@ everywhere.
 
 **One-time setup**
 
-1. Install [Git for Windows](https://git-scm.com/download/win) (if not already installed).
+**Git**
+Detect: `git --version`
+Install: Download from https://git-scm.com/download/win or `winget install Git.Git`
 
-2. Install [Visual Studio 2022](https://visualstudio.microsoft.com/) with these
-   workloads/components selected in the installer:
-   - *Desktop development with C++*
-   - *C++ Clang tools for Windows* (individual component — installs `clang-cl` and `llvm-objcopy`)
+**Visual Studio 2022**
+Detect: `clang-cl --version` — if this works, the required VS components are present.
+Install: Download [Visual Studio 2022](https://visualstudio.microsoft.com/) and select during install:
+- Workload: *Desktop development with C++*
+- Individual component: *C++ Clang tools for Windows* (installs `clang-cl` and `llvm-objcopy`)
 
-2. Install vcpkg and set the environment variable:
-   ```powershell
-   git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
-   C:\vcpkg\bootstrap-vcpkg.bat -disableMetrics
-   [System.Environment]::SetEnvironmentVariable("VCPKG_ROOT", "C:\vcpkg", "User")
-   $env:VCPKG_ROOT = "C:\vcpkg"   # apply to the current session
-   ```
+> **Note:** CMake is bundled with Visual Studio — no separate CMake install needed.
+
+**vcpkg**
+Detect: `echo $env:VCPKG_ROOT` (PowerShell) — if this prints a path, vcpkg is configured.
+Also check: `vcpkg version`
+Install:
+```powershell
+git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
+C:\vcpkg\bootstrap-vcpkg.bat -disableMetrics
+[System.Environment]::SetEnvironmentVariable("VCPKG_ROOT", "C:\vcpkg", "User")
+$env:VCPKG_ROOT = "C:\vcpkg"
+```
+
+**Node.js** *(optional — only needed for WebAssembly smoke testing)*
+Detect: `node --version`
+Install: Download from https://nodejs.org or `winget install OpenJS.NodeJS`
+
+**ast-grep** *(optional — recommended for code search and refactoring)*
+Detect: `sg --version`
+Install: `npm install -g @ast-grep/cli` (requires Node.js)
 
 **Configure and build** (PowerShell)
 
@@ -155,20 +171,40 @@ ctest --test-dir build -C Release --output-on-failure
 
 **One-time setup**
 
-1. Install Xcode Command Line Tools (provides Apple Clang) and LLVM tools
-   (`llvm-objcopy` is included):
-   ```bash
-   xcode-select --install
-   brew install llvm
-   ```
+**Xcode Command Line Tools** (provides Apple Clang, git, make)
+Detect: `xcode-select -p` — prints the active developer directory if installed.
+Also check: `clang --version`
+Install: `xcode-select --install`
 
-2. Install vcpkg and set the environment variable:
-   ```bash
-   git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
-   ~/vcpkg/bootstrap-vcpkg.sh -disableMetrics
-   echo 'export VCPKG_ROOT="$HOME/vcpkg"' >> ~/.zshrc   # or ~/.bashrc
-   source ~/.zshrc
-   ```
+**Homebrew**
+Detect: `brew --version`
+Install: `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`
+
+**LLVM tools** (provides `llvm-objcopy`, required for embedded resource build)
+Detect: `llvm-objcopy --version` or `$(brew --prefix llvm)/bin/llvm-objcopy --version`
+Install: `brew install llvm`
+
+> **Note:** Homebrew installs LLVM to a versioned prefix. The tools are accessible as
+> `$(brew --prefix llvm)/bin/llvm-objcopy`. CMake finds them automatically.
+
+**vcpkg**
+Detect: `echo $VCPKG_ROOT` — if this prints a path, vcpkg is configured.
+Also check: `vcpkg version`
+Install:
+```bash
+git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
+~/vcpkg/bootstrap-vcpkg.sh -disableMetrics
+echo 'export VCPKG_ROOT="$HOME/vcpkg"' >> ~/.zshrc   # or ~/.bashrc
+source ~/.zshrc
+```
+
+**Node.js** *(optional — only needed for WebAssembly smoke testing)*
+Detect: `node --version`
+Install: `brew install node`
+
+**ast-grep** *(optional — recommended for code search and refactoring)*
+Detect: `sg --version`
+Install: `brew install ast-grep`
 
 **Configure and build**
 
@@ -198,19 +234,45 @@ ctest --test-dir build --output-on-failure
 
 **One-time setup**
 
-1. Install Clang, LLVM tools (includes `llvm-objcopy`), and the supporting build tools:
-   ```bash
-   sudo apt-get update
-   sudo apt-get install -y build-essential clang llvm cmake ninja-build
-   ```
+**Git**
+Detect: `git --version`
+Install: `sudo apt-get install -y git`
 
-2. Install vcpkg and set the environment variable:
-   ```bash
-   git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
-   ~/vcpkg/bootstrap-vcpkg.sh -disableMetrics
-   echo 'export VCPKG_ROOT="$HOME/vcpkg"' >> ~/.bashrc
-   source ~/.bashrc
-   ```
+**Build tools + Clang + LLVM** (one command installs all)
+Detect each individually:
+- `clang --version`
+- `llvm-objcopy --version`
+- `cmake --version`
+- `ninja --version`
+
+Install all at once:
+```bash
+sudo apt-get update
+sudo apt-get install -y build-essential clang llvm cmake ninja-build
+```
+
+**vcpkg**
+Detect: `echo $VCPKG_ROOT` — if this prints a path, vcpkg is configured.
+Also check: `vcpkg version`
+Install:
+```bash
+git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
+~/vcpkg/bootstrap-vcpkg.sh -disableMetrics
+echo 'export VCPKG_ROOT="$HOME/vcpkg"' >> ~/.bashrc
+source ~/.bashrc
+```
+
+**Node.js** *(optional — only needed for WebAssembly smoke testing)*
+Detect: `node --version`
+Install: `sudo apt-get install -y nodejs`
+
+**wine64** *(optional — to run the Wine compatibility test locally)*
+Detect: `wine64 --version`
+Install: `sudo apt-get install -y wine64`
+
+**ast-grep** *(optional — recommended for code search and refactoring)*
+Detect: `sg --version`
+Install: `npm install -g @ast-grep/cli` (requires Node.js) or `cargo install ast-grep` (requires Rust)
 
 **Configure and build**
 
@@ -242,21 +304,21 @@ ctest --test-dir build --output-on-failure
 
 **One-time setup**
 
-1. Install build tools:
-   ```bash
-   pkg update
-   pkg install -y git cmake clang ninja python
-   ```
+**Build tools**
+Detect each: `git --version`, `cmake --version`, `clang --version`, `ninja --version`
+Install: `pkg update && pkg install -y git cmake clang ninja python`
 
-2. Install vcpkg (bootstrapped for ARM/Termux):
-   ```bash
-   git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
-   ~/vcpkg/bootstrap-vcpkg.sh -disableMetrics -useSystemBinaries
-   export VCPKG_ROOT="$HOME/vcpkg"
-   export VCPKG_FORCE_SYSTEM_BINARIES=1
-   echo 'export VCPKG_ROOT="$HOME/vcpkg"' >> ~/.bashrc
-   echo 'export VCPKG_FORCE_SYSTEM_BINARIES=1' >> ~/.bashrc
-   ```
+**vcpkg**
+Detect: `echo $VCPKG_ROOT`
+Install:
+```bash
+git clone https://github.com/microsoft/vcpkg.git ~/vcpkg
+~/vcpkg/bootstrap-vcpkg.sh -disableMetrics -useSystemBinaries
+export VCPKG_ROOT="$HOME/vcpkg"
+export VCPKG_FORCE_SYSTEM_BINARIES=1
+echo 'export VCPKG_ROOT="$HOME/vcpkg"' >> ~/.bashrc
+echo 'export VCPKG_FORCE_SYSTEM_BINARIES=1' >> ~/.bashrc
+```
 
 **Configure and build**
 
@@ -468,9 +530,32 @@ cmake --build build --parallel
 
 ---
 
-## Creating a Release
+## CI / CD Pipeline
 
-To publish a new release and trigger the automated build + upload:
+The pipeline has three trigger modes:
+
+| Trigger | Jobs that run | Release published? |
+|---|---|---|
+| Push to `main` | Linux only (build + unit tests) | No |
+| Manual dispatch (see below) | All 6 platforms | No |
+| `v*.*.*` tag push | All 6 platforms | **Yes** |
+
+**Why Linux only on push to `main`?** macOS runners cost 10× the minutes of Linux
+runners under GitHub's billing model. Linux with Clang catches the vast majority of
+bugs. Full cross-platform validation is reserved for deliberate actions.
+
+### Triggering a manual dispatch
+
+Go to your repository on GitHub → **Actions** tab → select **"Build and Release"** →
+click **"Run workflow"** → click the green **"Run workflow"** button. All 6 platform
+builds run; no release is created.
+
+Use this when you want to validate that everything still compiles on all platforms
+without publishing a release (e.g. after a period of inactivity, or before tagging).
+
+### Creating a release
+
+Tag the commit you want to release and push the tag:
 
 ```bash
 git tag v1.0.0
@@ -478,11 +563,16 @@ git push origin v1.0.0
 ```
 
 GitHub Actions will:
-1. Build the application on all four platform/architecture combinations.
-2. Package each binary into an archive.
-3. Create a GitHub Release named **Release v1.0.0** with all archives attached.
+1. Build on all 6 platforms (Windows, Linux, macOS x86_64, macOS arm64, Android, WebAssembly).
+2. Run unit tests on all native platforms; Wine compatibility test on the Windows binary.
+3. Package each binary into an archive.
+4. Create a GitHub Release named **"Release v1.0.0"** with all archives attached.
 
-You can then edit the release notes on GitHub if desired.
+To delete a tag if you made a mistake before pushing:
+```bash
+git tag -d v1.0.0            # delete locally
+git push origin :v1.0.0      # delete from GitHub
+```
 
 ---
 
@@ -551,10 +641,10 @@ before pushing:
    library list, CI jobs, minimum OS versions, or any other documented behaviour:
    update `README.md`, `ARCHITECTURE.md`, and/or `AGENTS.md` accordingly. Do not leave
    documentation stale.
-4. **Let CI be the cross-platform gate.** Push to a branch and open a PR. The GitHub
-   Actions workflow will build and test on Windows, Linux, macOS (x86_64 + arm64),
-   Android, WebAssembly, and run Wine compatibility tests. A green CI run is required
-   before merging to `main`.
+4. **Let CI be the cross-platform gate.** Push to `main` — the pipeline runs Linux
+   build + unit tests automatically. When you want full cross-platform validation,
+   trigger a manual dispatch from the GitHub Actions tab. A `v*.*.*` tag push runs
+   everything and publishes a release.
 
 > AI agents are subject to the same checklist. See `AGENTS.md` for the enforcement
 > rule.
