@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.20)
 
 # ---------------------------------------------------------------------------
 # vcpkg triplet – must be set before project() so the toolchain picks it up.
-# On Windows we ask vcpkg for the "static" triplet so that Boost and the CRT
-# are both linked statically (matching the /MT flag below).
+# On Windows we ask vcpkg for the "static" triplet so that all third-party
+# libraries and the CRT are both linked statically (matching the /MT flag below).
 # ---------------------------------------------------------------------------
 if(WIN32)
     set(VCPKG_TARGET_TRIPLET "x64-windows-static" CACHE STRING "vcpkg triplet")

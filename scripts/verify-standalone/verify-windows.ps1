@@ -83,6 +83,6 @@ if ($allClean) {
     Write-Host "SUCCESS: Binary appears to be fully self-contained (only core system DLLs detected)." -ForegroundColor Green
 } else {
     Write-Host "WARNING: Found $($nonSystemDeps.Count) potential non-standalone dependencies." -ForegroundColor Yellow
-    Write-Host "         Ensure all 3rd-party libraries (Boost, etc.) are linked statically." -ForegroundColor Gray
+    Write-Host "         Ensure all 3rd-party libraries (ada-url, reproc, cpptrace, etc.) are linked statically." -ForegroundColor Gray
 }
 Write-Host "`n"
