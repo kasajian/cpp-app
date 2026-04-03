@@ -53,7 +53,7 @@ or runtimes.
 - The C runtime is linked **statically** (`/MT`). The `/MD` flag (dynamic CRT) must
   never be used in release builds. This means no dependency on `MSVCP140.dll`,
   `VCRUNTIME140.dll`, or any Visual C++ Redistributable.
-- All third-party libraries (e.g. Boost) must be built with the matching
+- All third-party libraries (e.g. ada-url, reproc) must be built with the matching
   `x64-windows-static` vcpkg triplet. Using the default `x64-windows` triplet produces
   DLL dependencies and breaks the self-containment guarantee.
 - The workflow passes `-DVCPKG_TARGET_TRIPLET=x64-windows-static` explicitly — do not
@@ -90,7 +90,7 @@ or runtimes.
 ### Adding a new library
 
 Before adding any dependency, ask: *can this be avoided with the C++17 standard library
-or Boost components already present?*
+or libraries already present?*
 
 If a new library is genuinely necessary:
 

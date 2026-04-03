@@ -5,7 +5,7 @@ These scripts allow developers to manually verify that a built executable is "se
 ## Core Principle
 
 This project aims for **maximum binary self-containment**. A binary is considered standalone if it:
-1.  Links the C++ runtime and third-party libraries (like Boost) **statically**.
+1.  Links the C++ runtime and third-party libraries (like ada-url or reproc) **statically**.
 2.  Only depends on stable, standard libraries provided by the host operating system.
 
 ---
