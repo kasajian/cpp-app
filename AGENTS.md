@@ -1,5 +1,8 @@
 # AI Agent Guidelines for cpp_app
 
+This repository follows the agent standards defined in
+[`AGENT_STANDARDS.md`](AGENT_STANDARDS.md).
+
 This file exists specifically to inform AI coding assistants (Claude, Copilot, Cursor,
 ChatGPT, etc.) of the non-negotiable design principles for this project.
 
