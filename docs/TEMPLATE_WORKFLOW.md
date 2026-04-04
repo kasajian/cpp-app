@@ -17,7 +17,9 @@ convention updates) are made here and propagated outward.
 **`tool-*` repos (the tools):** Independent GitHub repositories derived from
 the template. Each has its own name, its own releases, and its own history.
 They share the template's infrastructure but diverge in `src/` and
-`CMakeLists.txt`.
+`CMakeLists.txt`. **Naming convention: every tool repo must be named `tool-<name>`**
+(e.g. `tool-myapp1`, `tool-converter`). This prefix keeps tool repos visually
+grouped in GitHub and distinguishable from the template itself.
 
 **The `template` remote:** A Git remote added to each tool repo that points
 back to `cpp-app`. This is how template updates are pulled in. You never push

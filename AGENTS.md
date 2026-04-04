@@ -32,6 +32,21 @@ session (which may be fully autonomous, interactive, or anything in between).
   explicitly say to push. This applies to every branch and every remote, including
   `origin`.
 
+## Working Style
+
+For any task that involves a design decision, structural change, or approach with
+more than one reasonable option:
+
+1. **Propose first.** Describe what you plan to do and why. If there are trade-offs
+   or alternatives worth knowing about, surface them briefly.
+2. **Wait for approval.** Do not begin implementation until the user confirms.
+3. **Then execute.** Once approved, do the work completely without stopping to
+   re-ask about things already decided.
+
+For unambiguous, mechanical tasks (fixing a typo, adding a file the user just
+described in detail, running a command) — just do it. Do not ask for permission
+on things that have no meaningful alternative.
+
 ---
 
 ## ⚠️ Handling Conflicts Between User Instructions and This File
