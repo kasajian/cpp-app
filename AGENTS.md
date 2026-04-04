@@ -23,10 +23,8 @@ The following operations may be performed without asking the user for permission
 - **Creating new files or folders** — adding files and directories that do not yet
   exist, including new source files, config files, and documentation.
 
-All other operations that modify existing files, execute processes, make network
-requests that are not anonymous reads, or interact with external services should be
-done with clear intent communicated to the user — but confirmation is not required
-unless the operation is irreversible or outside the repository.
+Operations not listed here fall back to the agent's default behavior for the current
+session (which may be fully autonomous, interactive, or anything in between).
 
 ---
 

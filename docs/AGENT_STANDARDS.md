@@ -185,10 +185,9 @@ requests. Permissions should be specific and scoped — granting broad permissio
 - **Creating new files or folders** — adding files that do not yet exist. This is
   generally safe to grant because no existing content is modified or deleted.
 
-Operations that are not explicitly permitted should be performed with clear
-communicated intent, even if they don't require confirmation. Irreversible operations
-(deleting files, pushing to remotes, modifying existing files outside the scope
-described by the user) should never be assumed to be permitted.
+Operations not listed fall back to the agent's default behavior for the session.
+This standard does not prescribe what that default should be — it only allows the
+repository owner to grant explicit permissions that override a cautious default.
 
 ---
 
