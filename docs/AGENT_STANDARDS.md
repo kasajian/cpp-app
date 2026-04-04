@@ -202,3 +202,74 @@ When this standard is published to a standalone repository, that line should
 reference the URL instead:
 
 > This repository follows the agent standards defined at `https://…/AGENT_STANDARDS.md`.
+
+---
+
+## Bootstrapping a New Repository
+
+Use these steps when starting a repository from scratch — not a clone of a template —
+and you want it to follow this standard.
+
+### Step 1 — Copy the generic files
+
+These files are fully project-agnostic and can be copied verbatim from any reference
+repository that already follows this standard:
+
+| File | Notes |
+|---|---|
+| `AGENTS.md` | Copy, then edit — see Step 2 |
+| `CLAUDE.md` | Copy as-is |
+| `.github/copilot-instructions.md` | Copy as-is; create the `.github/` folder if it does not exist |
+| `docs/AGENT_STANDARDS.md` | Copy as-is; or reference by URL once published to a standalone repo |
+
+### Step 2 — Trim and update `AGENTS.md`
+
+The copied `AGENTS.md` will contain project-specific rules from the source repository
+(build constraints, platform rules, etc.) that do not apply to your new project.
+
+1. Update the `#` title at the top to name your project.
+2. Keep the meta-rule sections verbatim: **Permitted Operations**, **Handling
+   Conflicts**, and **Mandatory Update Rule** (including the file list in each).
+3. Remove everything below the last meta-rule section that was specific to the source
+   project. Replace it with your own project's invariants and constraints.
+4. Update the companion-file lists inside **Handling Conflicts** and **Mandatory
+   Update Rule** to match your actual files.
+
+### Step 3 — Add the companion-files callout to `README.md`
+
+In your new `README.md`, include a callout block near the top that points readers to
+the companion files. Copy the block below and adjust the file list to match whatever
+files your `docs/` folder contains:
+
+```markdown
+> **For AI agents and contributors:** Read [`AGENTS.md`](AGENTS.md) and
+> [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) before making any changes. They
+> document the non-negotiable constraints that apply to this codebase.
+>
+> Additional documentation is in the [`docs/`](docs/) folder:
+> [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) ·
+> [`docs/AGENT_STANDARDS.md`](docs/AGENT_STANDARDS.md)
+```
+
+### Step 4 — Create the project-specific files fresh
+
+These files cannot be copied — they must be written for your project:
+
+| File | What to write |
+|---|---|
+| `README.md` | What the project is, how to build it, how to use it. Include the callout from Step 3. |
+| `docs/ARCHITECTURE.md` | Why the code is structured the way it is; key decisions and constraints. |
+
+### What you end up with
+
+```
+your-repo/
+├── AGENTS.md                         ← meta-rules + your project's constraints
+├── CLAUDE.md                         ← points Claude to AGENTS.md
+├── README.md                         ← project front door, with companion-files callout
+├── .github/
+│   └── copilot-instructions.md       ← points Copilot to AGENTS.md
+└── docs/
+    ├── AGENT_STANDARDS.md            ← this standard (copied or referenced by URL)
+    └── ARCHITECTURE.md               ← your project's engineering record
+```
