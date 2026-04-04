@@ -8,7 +8,8 @@ A "batteries-included" template for building cross-platform C++ console applicat
 |---|---|---|
 | `README.md` *(this file)* | Everyone | What this is, how to build and run it |
 | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Engineers & contributors | Why it's built the way it is; key design decisions and constraints |
-| [`AGENTS.md`](AGENTS.md) | AI agents & contributors | Rules that must never be violated when changing this code |
+| [`AGENTS.md`](AGENTS.md) | AI agents & contributors | Agent behavior rules: what is permitted, prohibited, and how to handle conflicts |
+| [`docs/CONSTRAINTS.md`](docs/CONSTRAINTS.md) | AI agents & contributors | Technical invariants that must never be violated: platform rules, build system, compiler, CI |
 | [`docs/AGENT_STANDARDS.md`](docs/AGENT_STANDARDS.md) | Anyone adopting this convention | The documentation standard this repo follows; how to bootstrap it in a new repo |
 | [`docs/TEMPLATE_WORKFLOW.md`](docs/TEMPLATE_WORKFLOW.md) | Anyone creating a new tool from this template | How to clone, maintain, and pull updates from this template |
 

@@ -258,19 +258,21 @@ These files cannot be copied — they must be written for your project:
 
 | File | What to write |
 |---|---|
-| `README.md` | What the project is, how to build it, how to use it. Include the callout from Step 3. |
+| `README.md` | What the project is, how to build it, how to use it. Include the table from Step 3. |
 | `docs/ARCHITECTURE.md` | Why the code is structured the way it is; key decisions and constraints. |
+| `docs/CONSTRAINTS.md` | The technical invariants specific to your project: platform rules, build system rules, compiler requirements, dependency rules, what not to do. This is the file that differs most between projects. |
 
 ### What you end up with
 
 ```
 your-repo/
-├── AGENTS.md                         ← meta-rules + your project's constraints
+├── AGENTS.md                         ← meta-rules + pointer to docs/CONSTRAINTS.md
 ├── CLAUDE.md                         ← points Claude to AGENTS.md
-├── README.md                         ← project front door, with companion-files callout
+├── README.md                         ← project front door, with companion-files table
 ├── .github/
 │   └── copilot-instructions.md       ← points Copilot to AGENTS.md
 └── docs/
     ├── AGENT_STANDARDS.md            ← this standard (copied or referenced by URL)
-    └── ARCHITECTURE.md               ← your project's engineering record
+    ├── ARCHITECTURE.md               ← your project's engineering record
+    └── CONSTRAINTS.md                ← your project's technical invariants
 ```
