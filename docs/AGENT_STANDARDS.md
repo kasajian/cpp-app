@@ -235,20 +235,21 @@ The copied `AGENTS.md` will contain project-specific rules from the source repos
 4. Update the companion-file lists inside **Handling Conflicts** and **Mandatory
    Update Rule** to match your actual files.
 
-### Step 3 — Add the companion-files callout to `README.md`
+### Step 3 — Add the companion-files table to `README.md`
 
-In your new `README.md`, include a callout block near the top that points readers to
-the companion files. Copy the block below and adjust the file list to match whatever
-files your `docs/` folder contains:
+In your new `README.md`, include a documentation table near the top so any visitor
+immediately understands what each file is for. Copy the block below and adjust the
+rows to match your actual files:
 
 ```markdown
-> **For AI agents and contributors:** Read [`AGENTS.md`](AGENTS.md) and
-> [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) before making any changes. They
-> document the non-negotiable constraints that apply to this codebase.
->
-> Additional documentation is in the [`docs/`](docs/) folder:
-> [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) ·
-> [`docs/AGENT_STANDARDS.md`](docs/AGENT_STANDARDS.md)
+## Repository Documentation
+
+| File | For whom | What it answers |
+|---|---|---|
+| `README.md` *(this file)* | Everyone | What this is, how to build and run it |
+| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | Engineers & contributors | Why it's built the way it is; key design decisions and constraints |
+| [`AGENTS.md`](AGENTS.md) | AI agents & contributors | Rules that must never be violated when changing this code |
+| [`docs/AGENT_STANDARDS.md`](docs/AGENT_STANDARDS.md) | Anyone adopting this convention | The documentation standard this repo follows; how to bootstrap it in a new repo |
 ```
 
 ### Step 4 — Create the project-specific files fresh
