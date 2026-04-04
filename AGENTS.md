@@ -11,6 +11,33 @@ This file defines the non-negotiable design principles for this project. It is
 written with AI coding agents as the primary audience, but applies equally to
 human contributors — these are project invariants, not AI-specific rules.
 
+## ⚠️ Handling Conflicts Between User Instructions and This File
+
+When a user instruction conflicts with a rule in this file or any companion file,
+**do not automatically comply with the user instruction, and do not automatically
+update the file.** Instead:
+
+1. **Stop** and inform the user of the specific conflict — quote or reference the
+   rule being violated and which file it appears in.
+2. **Ask the user to choose** one of the following:
+   - **Comply with the file:** The user reconsiders; the instruction is adjusted to
+     align with the existing rule. No file update needed.
+   - **Update the file:** The rule itself should change. Update the relevant companion
+     file(s) alongside or before the code change.
+   - **Intentional exception:** This is a deliberate one-time deviation. In this case:
+     - The user must provide the specific reason for the exception.
+     - Add a comment directly at the non-compliant change (source comment, CMake
+       comment, YAML comment, etc.) stating that it is intentionally non-compliant,
+       which rule it violates, and the reason the user gave.
+     - Do **not** update the rule in the companion file — the rule still stands for
+       all other cases.
+
+This applies to all companion files: `README.md`, `AGENTS.md`, `CLAUDE.md`,
+`docs/ARCHITECTURE.md`, `docs/AGENT_STANDARDS.md`, `docs/TEMPLATE_WORKFLOW.md`,
+and `.github/copilot-instructions.md`.
+
+---
+
 ## ⚠️ MANDATORY: Update Documentation With Every Change
 
 **This is not optional. There are no exceptions.**

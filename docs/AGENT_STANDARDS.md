@@ -140,6 +140,35 @@ explicitly extend to any files those companions link to.
 
 ---
 
+## Conflict Resolution: User Instructions vs. Companion Files
+
+When an agent receives a user instruction that conflicts with a rule in a companion
+file, it must not silently comply with the instruction or silently update the file.
+The correct procedure is:
+
+1. **Halt and surface the conflict.** Tell the user which rule is being violated and
+   in which companion file it appears.
+2. **Ask the user to choose** one of three outcomes:
+   - **Comply with the file:** The user adjusts their request to align with the
+     existing rule. No companion file changes needed.
+   - **Update the file:** The rule should change. Update the companion file to reflect
+     the new direction before or alongside the implementation.
+   - **Intentional exception:** This one change deliberately deviates from the rule.
+     The user must provide the reason. The agent adds a comment at the point of the
+     change — in whatever comment syntax the file supports (source comment, CMake
+     comment, YAML comment, etc.) — stating that it is intentionally non-compliant,
+     which rule it violates, and the stated reason. The companion file is **not**
+     updated; the rule remains in force for all other cases.
+
+This procedure prevents two failure modes: agents that blindly execute conflicting
+instructions (silently eroding standards), and agents that silently rewrite standards
+to match whatever the user asks without surfacing the tension.
+
+Every `AGENTS.md` written under this standard should include a version of this
+conflict-resolution procedure, listing the specific companion files it applies to.
+
+---
+
 ## Referencing This Standard
 
 A repository following this standard should include the following line near the
